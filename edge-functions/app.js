@@ -1397,11 +1397,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 <button id="draft-discard-btn" type="button" class="opt-button" style="padding:3px 10px; font-size:12px; cursor:pointer;">${SUPPORTED_LANG[lang].discardDraft || "放弃"}</button>
             </div>
         </div>
+        ${tips ? `<div class="tips-box" style="width:100%; max-width:960px; margin:0 auto 12px auto; box-sizing:border-box;">${tips.startsWith("<") ? tips : `<div style="background:#fff8c5; border:1px solid #d4a72c; color:#573a08; padding:10px 16px; border-radius:6px; font-size:13px; line-height:1.5;">${tips}</div>`}</div>` : ""}
         <div class="stack">
             <div class="layer_1">
                 <div class="layer_2">
                     <div class="layer_3">
-                        ${tips ? `<div class="tips">${tips}</div>` : ""}
                         <textarea id="contents" class="contents full-width ${isEdit && !isMdMode ? "" : "hide"}" spellcheck="true" placeholder="${SUPPORTED_LANG[lang].emptyPH}">${content}</textarea>
                         ${isEdit && isMdMode ? `<div id="vditor" class="contents full-width"></div>` : ""}
                         ${!isEdit && isMdMode ? `<div id="preview-md" class="contents full-width"></div>` : ""}
