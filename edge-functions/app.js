@@ -600,7 +600,10 @@ const store = getStore("notepad");
       copy: "Copy",
       emptyPH: "There are many like it, but this one is mine...",
       tipEncrypt: "This Note has been encrypted, please enter password!",
-      tip404: "404, Nothing here"
+      tip404: "404, Nothing here",
+      edit: "Edit",
+      preview: "Preview",
+      tipDblClick: "Double-click to edit"
     },
     "zh": {
       setPW: "\u8BBE\u7F6E\u5BC6\u7801",
@@ -610,7 +613,10 @@ const store = getStore("notepad");
       copy: "\u590D\u5236",
       emptyPH: "\u770B\u6765\u4F60\u662F\u7B2C\u4E00\u4E2A\u5230\u8FD9\u513F\u7684\u4EBA\uFF0C\u5199\u70B9\u4EC0\u4E48\u5427...",
       tipEncrypt: "\u8FD9\u662F\u4E00\u7BC7\u52A0\u5BC6\u7B14\u8BB0\uFF0C\u4F60\u5FC5\u987B\u5148\u8F93\u5165\u5BC6\u7801",
-      tip404: "404\uFF0C\u4F60\u8981\u627E\u7684\u4E1C\u897F\u5E76\u4E0D\u5B58\u5728"
+      tip404: "404\uFF0C\u4F60\u8981\u627E\u7684\u4E1C\u897F\u5E76\u4E0D\u5B58\u5728",
+      edit: "\u7F16\u8F91",
+      preview: "\u9884\u89C8",
+      tipDblClick: "\u53CC\u51FB\u53EF\u5FEB\u901F\u7F16\u8F91"
     }
   };
 
@@ -629,10 +635,11 @@ const store = getStore("notepad");
             <div class="opt">
                 <button class="opt-button opt-pw">${pw ? SUPPORTED_LANG[lang].changePW : SUPPORTED_LANG[lang].setPW}</button>
                 ${SWITCHER("Markdown", mode === "md", "opt-mode")}
+                ${mode === "md" ? `<button id="md-toggle-btn" class="opt-button" style="margin-left:8px;" title="${SUPPORTED_LANG[lang].tipDblClick}">✏️ ${SUPPORTED_LANG[lang].edit}</button>` : ""}
                 ${SWITCHER(SUPPORTED_LANG[lang].share, share, "opt-share")}
             </div>
             ` : ""}
-        <a class="github-link" title="Github" target="_blank" href="https://github.com/s0urcelab/serverless-cloud-notepad" rel="noreferrer">
+        <a class="github-link" title="Github" target="_blank" href="https://github.com/kafuneri/edgeone-cloud-notepad" rel="noreferrer">
             <svg viewBox="64 64 896 896" focusable="false" data-icon="github" width="1em" height="1em" fill="currentColor" aria-hidden="true"><path d="M511.6 76.3C264.3 76.2 64 276.4 64 523.5 64 718.9 189.3 885 363.8 946c23.5 5.9 19.9-10.8 19.9-22.2v-77.5c-135.7 15.9-141.2-73.9-150.3-88.9C215 726 171.5 718 184.5 703c30.9-15.9 62.4 4 98.9 57.9 26.4 39.1 77.9 32.5 104 26 5.7-23.5 17.9-44.5 34.7-60.8-140.6-25.2-199.2-111-199.2-213 0-49.5 16.3-95 48.3-131.7-20.4-60.5 1.9-112.3 4.9-120 58.1-5.2 118.5 41.6 123.2 45.3 33-8.9 70.7-13.6 112.9-13.6 42.4 0 80.2 4.9 113.5 13.9 11.3-8.6 67.3-48.8 121.3-43.9 2.9 7.7 24.7 58.3 5.5 118 32.4 36.8 48.9 82.7 48.9 132.3 0 102.2-59 188.1-200 212.9a127.5 127.5 0 0138.1 91v112.5c.8 9 0 17.9 15 17.9 177.1-59.7 304.6-227 304.6-424.1 0-247.2-200.4-447.3-447.5-447.3z"></path></svg>
         </a>
         ${updateAt ? `<span class="last-modified">${SUPPORTED_LANG[lang].lastModified} ${import_dayjs.default.unix(updateAt).fromNow()}</span>` : ""}
@@ -650,16 +657,117 @@ const store = getStore("notepad");
     </div>
 </div>
 `;
-  var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt }) => `
+  var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt }) => {
+    const isMdMode = ext.mode === "md";
+    return `
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${title} \u2014 Cloud Notepad</title>
+    <title>${title} — Cloud Notepad</title>
     <link href="${CDN_PREFIX}/favicon.ico" rel="shortcut icon" type="image/ico" />
     <link href="${CDN_PREFIX}/css/app.min.css" rel="stylesheet" media="screen" />
+    <style>
+      #preview-md {
+        line-height: 1.7;
+        color: #24292f;
+        word-wrap: break-word;
+        white-space: normal;
+        padding: 4px 10px;
+        box-sizing: border-box;
+      }
+      #preview-md h1, #preview-md h2, #preview-md h3, #preview-md h4 {
+        margin-top: 20px;
+        margin-bottom: 12px;
+        font-weight: 600;
+        line-height: 1.3;
+        color: #1f2328;
+      }
+      #preview-md h1 { font-size: 1.85em; border-bottom: 1px solid #d0d7de; padding-bottom: 0.3em; }
+      #preview-md h2 { font-size: 1.45em; border-bottom: 1px solid #d0d7de; padding-bottom: 0.3em; }
+      #preview-md h3 { font-size: 1.2em; }
+      #preview-md p { margin: 0 0 14px 0; }
+      #preview-md blockquote {
+        margin: 0 0 16px;
+        padding: 4px 14px;
+        color: #57606a;
+        border-left: 4px solid #0969da;
+        background: #f6f8fa;
+        border-radius: 2px;
+      }
+      #preview-md ul, #preview-md ol {
+        padding-left: 24px;
+        margin: 0 0 14px;
+      }
+      #preview-md li { margin-bottom: 4px; }
+      #preview-md code {
+        padding: 0.2em 0.4em;
+        margin: 0;
+        font-size: 88%;
+        background-color: rgba(175, 184, 193, 0.2);
+        border-radius: 6px;
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      }
+      #preview-md pre {
+        padding: 14px;
+        overflow-x: auto;
+        font-size: 88%;
+        line-height: 1.45;
+        background-color: #f6f8fa;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+        margin-bottom: 16px;
+      }
+      #preview-md pre code {
+        padding: 0;
+        background-color: transparent;
+      }
+      #preview-md table {
+        border-spacing: 0;
+        border-collapse: collapse;
+        margin: 16px 0;
+        width: 100%;
+        overflow-x: auto;
+        display: block;
+      }
+      #preview-md table th, #preview-md table td {
+        padding: 8px 14px;
+        border: 1px solid #d0d7de;
+      }
+      #preview-md table th {
+        background-color: #f6f8fa;
+        font-weight: 600;
+      }
+      #preview-md table tr:nth-child(2n) {
+        background-color: #fcfdfe;
+      }
+      #preview-md img {
+        max-width: 100%;
+        border-radius: 4px;
+      }
+      #preview-md hr {
+        height: 2px;
+        padding: 0;
+        margin: 20px 0;
+        background-color: #d0d7de;
+        border: 0;
+      }
+      #preview-md a {
+        color: #0969da;
+        text-decoration: none;
+      }
+      #preview-md a:hover {
+        text-decoration: underline;
+      }
+      .stack .layer_1 .layer_2 .layer_3 .contents.full-width {
+        width: 100% !important;
+      }
+      .stack .layer_1 .layer_2 .layer_3 .contents.hide {
+        display: none !important;
+      }
+    </style>
 </head>
 <body>
     <div class="note-container">
@@ -668,9 +776,8 @@ const store = getStore("notepad");
                 <div class="layer_2">
                     <div class="layer_3">
                         ${tips ? `<div class="tips">${tips}</div>` : ""}
-                        <textarea id="contents" class="contents ${isEdit ? "" : "hide"}" spellcheck="true" placeholder="${SUPPORTED_LANG[lang].emptyPH}">${content}</textarea>
-                        ${isEdit && ext.mode === "md" ? '<div class="divide-line"></div>' : ""}
-                        ${tips || isEdit && ext.mode !== "md" ? "" : `<div id="preview-${ext.mode || "plain"}" class="contents"></div>`}
+                        <textarea id="contents" class="contents full-width ${isEdit ? "" : "hide"}" spellcheck="true" placeholder="${SUPPORTED_LANG[lang].emptyPH}">${content}</textarea>
+                        ${tips || !isMdMode && isEdit ? "" : `<div id="preview-${ext.mode || "plain"}" class="contents full-width"></div>`}
                     </div>
                 </div>
             </div>
@@ -679,14 +786,89 @@ const store = getStore("notepad");
     <div id="loading"></div>
     ${MODAL(lang)}
     ${FOOTER({ ...ext, isEdit, lang })}
-    ${ext.mode === "md" || ext.share ? `<script src="${CDN_PREFIX}/js/purify.min.js"><\/script>` : ""}
-    ${ext.mode === "md" ? `<script src="${CDN_PREFIX}/js/marked.min.js"><\/script>` : ""}
+    ${isMdMode || ext.share ? `<script src="${CDN_PREFIX}/js/purify.min.js"><\/script>` : ""}
+    ${isMdMode ? `<script src="${CDN_PREFIX}/js/marked.min.js"><\/script>` : ""}
     <script src="${CDN_PREFIX}/js/clip.min.js"><\/script>
     <script src="${CDN_PREFIX}/js/app.min.js"><\/script>
     ${showPwPrompt ? "<script>passwdPrompt()<\/script>" : ""}
+    ${isEdit && isMdMode ? `
+    <script>
+      (function() {
+        const contents = document.querySelector("#contents");
+        const preview = document.querySelector("#preview-md");
+        const toggleBtn = document.querySelector("#md-toggle-btn");
+        const langTexts = {
+          edit: "${SUPPORTED_LANG[lang].edit}",
+          preview: "${SUPPORTED_LANG[lang].preview}",
+          tip: "${SUPPORTED_LANG[lang].tipDblClick}"
+        };
+
+        let isEditing = !contents.value.trim();
+
+        function syncView() {
+          if (isEditing) {
+            contents.classList.remove("hide");
+            contents.style.display = "block";
+            if (preview) preview.style.display = "none";
+            if (toggleBtn) {
+              toggleBtn.innerHTML = "👁️ " + langTexts.preview;
+              toggleBtn.title = "";
+            }
+            contents.focus();
+          } else {
+            contents.classList.add("hide");
+            contents.style.display = "none";
+            if (preview) {
+              preview.style.display = "block";
+              if (window.DOMPurify && window.marked) {
+                preview.innerHTML = DOMPurify.sanitize(marked.parse(contents.value || ""));
+              }
+            }
+            if (toggleBtn) {
+              toggleBtn.innerHTML = "✏️ " + langTexts.edit;
+              toggleBtn.title = langTexts.tip;
+            }
+          }
+        }
+
+        if (toggleBtn) {
+          toggleBtn.onclick = function() {
+            isEditing = !isEditing;
+            syncView();
+          };
+        }
+
+        if (preview) {
+          preview.ondblclick = function() {
+            isEditing = true;
+            syncView();
+          };
+          preview.title = langTexts.tip;
+        }
+
+        if (contents) {
+          contents.addEventListener("keydown", function(e) {
+            if (e.key === "Escape" || (e.key === "Enter" && (e.ctrlKey || e.metaKey))) {
+              if (isEditing && contents.value.trim()) {
+                isEditing = false;
+                syncView();
+              }
+            }
+          });
+        }
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", syncView);
+        } else {
+          syncView();
+        }
+      })();
+    </script>
+    ` : ""}
 </body>
 </html>
 `;
+  };
   var Edit = (data) => HTML({ isEdit: true, ...data });
   var Share = (data) => HTML(data);
   var NeedPasswd = (data) => HTML({ tips: SUPPORTED_LANG[data.lang].tipEncrypt, showPwPrompt: true, ...data });
