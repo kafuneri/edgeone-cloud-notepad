@@ -1,6 +1,19 @@
   let SALT, SECRET, LIST_SECRET, KV, ADMIN_PASSWORD;
 import { getStore } from "@edgeone/pages-blob";
-const store = getStore("notepad");
+let _storeInstance = null;
+function getNotepadStore() {
+  if (!_storeInstance) {
+    _storeInstance = getStore("notepad");
+  }
+  return _storeInstance;
+}
+const store = new Proxy({}, {
+  get(target, prop) {
+    const s = getNotepadStore();
+    const val = s[prop];
+    return typeof val === "function" ? val.bind(s) : val;
+  }
+});
   // 新增：用于记录错误次数的内存黑名单
   const ipFailMap = new Map(); 
   var __create = Object.create;
@@ -589,7 +602,13 @@ const store = getStore("notepad");
   });
   var import_dayjs = __toESM(require_dayjs_min());
   var import_relativeTime = __toESM(require_relativeTime());
-  import_dayjs.default.extend(import_relativeTime.default);
+  try {
+    if (import_dayjs?.default?.extend && import_relativeTime?.default) {
+      import_dayjs.default.extend(import_relativeTime.default);
+    }
+  } catch (e) {
+    console.error("dayjs extend error:", e);
+  }
 
   // src/constant.js
   var CDN_PREFIX = "//gcore.jsdelivr.net/gh/s0urcelab/serverless-cloud-notepad@master/static";
@@ -2544,19 +2563,24 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
   }
 
   export default async function onRequest(context) {
-    const request = context?.request || (context instanceof Request ? context : null);
-    const env = context?.env || process?.env || {};
-    SALT = env?.SCN_SALT || process.env?.SCN_SALT || "";
-    SECRET = env?.SCN_SECRET || process.env?.SCN_SECRET || "";
-    LIST_SECRET = env?.LIST_SECRET || process.env?.LIST_SECRET || "";
-    ADMIN_PASSWORD = env?.ADMIN_PASSWORD || process.env?.ADMIN_PASSWORD || "";
-    KV = env?.notepad_kv || globalThis?.notepad_kv || null;
-
     try {
+      const safeProcessEnv = typeof process !== "undefined" && process && process.env ? process.env : {};
+      const env = context?.env || safeProcessEnv || {};
+      const request = context?.request || (typeof Request !== "undefined" && context instanceof Request ? context : context);
+
+      SALT = env?.SCN_SALT || safeProcessEnv?.SCN_SALT || "";
+      SECRET = env?.SCN_SECRET || safeProcessEnv?.SCN_SECRET || "";
+      LIST_SECRET = env?.LIST_SECRET || safeProcessEnv?.LIST_SECRET || "";
+      ADMIN_PASSWORD = env?.ADMIN_PASSWORD || safeProcessEnv?.ADMIN_PASSWORD || "";
+      KV = env?.notepad_kv || (typeof globalThis !== "undefined" ? globalThis?.notepad_kv : null) || null;
+
       const resp = await route(request);
       return resp || new Response("Not Found", { status: 404 });
     } catch (err) {
       console.error("onRequest error:", err);
-      return returnJSON(500, "Internal Error: " + err.message);
+      return new Response("Internal Edge Error: " + (err?.stack || err?.message || String(err)), {
+        status: 500,
+        headers: { "Content-Type": "text/plain;charset=UTF-8" }
+      });
     }
   }
