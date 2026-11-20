@@ -1348,18 +1348,18 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     </div>
 
     <div class="note-container">
+        <div id="draft-alert" style="display:none; width:100%; max-width:960px; margin:0 auto 12px auto; padding:8px 16px; background:#fff8c5; border:1px solid #d4a72c; border-radius:6px; font-size:13px; color:#573a08; align-items:center; justify-content:space-between; box-shadow:0 1px 4px rgba(0,0,0,0.06); box-sizing:border-box;">
+            <span id="draft-alert-msg">${SUPPORTED_LANG[lang].draftDetected || "检测到本地未保存草稿"}</span>
+            <div style="display:flex; gap:8px;">
+                <button id="draft-restore-btn" type="button" class="opt-button" style="background:#2da44e; color:#fff; border-color:#2da44e; padding:3px 12px; font-size:12px; font-weight:500; cursor:pointer;">${SUPPORTED_LANG[lang].restoreDraft || "恢复草稿"}</button>
+                <button id="draft-discard-btn" type="button" class="opt-button" style="padding:3px 10px; font-size:12px; cursor:pointer;">${SUPPORTED_LANG[lang].discardDraft || "放弃"}</button>
+            </div>
+        </div>
         <div class="stack">
             <div class="layer_1">
                 <div class="layer_2">
                     <div class="layer_3">
                         ${tips ? `<div class="tips">${tips}</div>` : ""}
-                        <div id="draft-alert" style="display:none; margin-bottom:12px; padding:8px 12px; background:#fff8c5; border:1px solid #d4a72c; border-radius:6px; font-size:12px; color:#573a08; align-items:center; justify-content:space-between; box-shadow:0 1px 3px rgba(0,0,0,0.05); z-index:10; position:relative;">
-                            <span id="draft-alert-msg">${SUPPORTED_LANG[lang].draftDetected || "检测到本地未保存草稿"}</span>
-                            <div style="display:flex; gap:8px;">
-                                <button id="draft-restore-btn" type="button" class="opt-button" style="background:#2da44e; color:#fff; border-color:#2da44e; padding:2px 10px; font-size:12px; font-weight:500; cursor:pointer;">${SUPPORTED_LANG[lang].restoreDraft || "恢复草稿"}</button>
-                                <button id="draft-discard-btn" type="button" class="opt-button" style="padding:2px 8px; font-size:12px; cursor:pointer;">${SUPPORTED_LANG[lang].discardDraft || "放弃"}</button>
-                            </div>
-                        </div>
                         <textarea id="contents" class="contents full-width ${isEdit && !isMdMode ? "" : "hide"}" spellcheck="true" placeholder="${SUPPORTED_LANG[lang].emptyPH}">${content}</textarea>
                         ${isEdit && isMdMode ? `<div id="vditor" class="contents full-width"></div>` : ""}
                         ${!isEdit && isMdMode ? `<div id="preview-md" class="contents full-width"></div>` : ""}
