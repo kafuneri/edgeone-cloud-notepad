@@ -1769,22 +1769,24 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               grid.innerHTML = list.map(function(item) {
                 const safeName = item.filename.replace(/[^a-zA-Z0-9]/g, '_');
                 const sizeStr = item.size ? (item.size / 1024).toFixed(0) + " KB" : "";
-                return '<div class="img-card" id="img-card-' + safeName + '" style="border: 1px solid #e1e4e8; border-radius: 8px; overflow: hidden; background: #f6f8fa; display: flex; flex-direction: column;">' +
-                  '<div class="img-preview-box" data-url="' + item.url + '" style="width: 100%; height: 110px; background-image: repeating-conic-gradient(#f0f0f0 0% 25%, #fff 0% 50%) 50% / 16px 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden;" title="点击插入到笔记">' +
-                    '<img src="' + item.url + '" style="max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none;" loading="lazy" />' +
-                  '</div>' +
-                  '<div style="padding: 6px 8px; background: #fff; border-top: 1px solid #e1e4e8; display: flex; flex-direction: column; gap: 4px;">' +
-                    '<div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #57606a;">' +
-                      '<span style="font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70px;" title="' + item.filename + '">' + item.filename + '</span>' +
-                      '<span>' + sizeStr + '</span>' +
-                    </div>' +
-                    '<div style="display: flex; gap: 4px; margin-top: 2px;">' +
-                      '<button class="opt-button" data-action="insert" data-url="' + item.url + '" style="flex: 1; padding: 2px 4px; font-size: 11px;">${SUPPORTED_LANG[lang].insertImg || "插入"}</button>' +
-                      '<button class="opt-button" data-action="copy" data-url="' + item.url + '" style="padding: 2px 6px; font-size: 11px;" title="复制 Markdown">📋</button>' +
-                      '<button class="opt-button" data-action="delete" data-filename="' + item.filename + '" style="padding: 2px 6px; font-size: 11px; color: #cf222e;" title="删除图片">🗑️</button>' +
-                    </div>' +
-                  '</div>' +
-                '</div>';
+                return [
+                  '<div class="img-card" id="img-card-' + safeName + '" style="border: 1px solid #e1e4e8; border-radius: 8px; overflow: hidden; background: #f6f8fa; display: flex; flex-direction: column;">',
+                    '<div class="img-preview-box" data-url="' + item.url + '" style="width: 100%; height: 110px; background-image: repeating-conic-gradient(#f0f0f0 0% 25%, #fff 0% 50%) 50% / 16px 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden;" title="点击插入到笔记">',
+                      '<img src="' + item.url + '" style="max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none;" loading="lazy" />',
+                    '</div>',
+                    '<div style="padding: 6px 8px; background: #fff; border-top: 1px solid #e1e4e8; display: flex; flex-direction: column; gap: 4px;">',
+                      '<div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #57606a;">',
+                        '<span style="font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70px;" title="' + item.filename + '">' + item.filename + '</span>',
+                        '<span>' + sizeStr + '</span>',
+                      '</div>',
+                      '<div style="display: flex; gap: 4px; margin-top: 2px;">',
+                        '<button class="opt-button" data-action="insert" data-url="' + item.url + '" style="flex: 1; padding: 2px 4px; font-size: 11px;">${SUPPORTED_LANG[lang].insertImg || "插入"}</button>',
+                        '<button class="opt-button" data-action="copy" data-url="' + item.url + '" style="padding: 2px 6px; font-size: 11px;" title="复制 Markdown">📋</button>',
+                        '<button class="opt-button" data-action="delete" data-filename="' + item.filename + '" style="padding: 2px 6px; font-size: 11px; color: #cf222e;" title="删除图片">🗑️</button>',
+                      '</div>',
+                    '</div>',
+                  '</div>'
+                ].join("");
               }).join("");
 
               if (!grid._hasListener) {
