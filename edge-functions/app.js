@@ -2745,7 +2745,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       try {
         const valStr = typeof value === "object" ? JSON.stringify(value) : String(value);
         const kvOpts = {};
-        if (options && options.expirationTtl && typeof options.expirationTtl === "number" && options.expirationTtl > 0) {
+        if (options && options.expirationTtl && typeof options.expirationTtl === "number" && options.expirationTtl >= 60) {
           kvOpts.expirationTtl = options.expirationTtl;
         }
         return await KV.put(key, valStr, kvOpts);
