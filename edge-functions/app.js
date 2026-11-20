@@ -558,35 +558,18 @@ const store = getStore("notepad");
 
   // node_modules/itty-router/dist/itty-router.min.mjs
   function e({ base: t = "", routes: n = [] } = {}) {
-    return {
-      __proto__: new Proxy({}, {
-        get: (e2, a, o) => (e3, ...r) => n.push([
-          a.toUpperCase(),
-          e3 instanceof RegExp ? e3 : RegExp(`^${(t + e3).replace(/(\/?)\*/g, "($1.*)?").replace(/\/$/, "").replace(/:(\w+)(\?)?(\.)?/g, "$2(?<$1>[^/]+)$2$3").replace(/\.(?=[\w(])/, "\\.").replace(/\)\.\?\(([^\\[]+)\[\^/g, "?)\\.?($1(?<=\\.)[^\\.")}/*$`),
-          r
-        ]) && o
-      }),
-      routes: n,
-      async handle(e2, ...r) {
-        let a, o, t2 = new URL(e2.url);
-        e2.query = {};
-        if (t2.searchParams && t2.searchParams.forEach) {
-          t2.searchParams.forEach((v, k) => { e2.query[k] = v; });
+    return { __proto__: new Proxy({}, { get: (e2, a, o) => (e3, ...r) => n.push([a.toUpperCase(), RegExp(`^${(t + e3).replace(/(\/?)\*/g, "($1.*)?").replace(/\/$/, "").replace(/:(\w+)(\?)?(\.)?/g, "$2(?<$1>[^/]+)$2$3").replace(/\.(?=[\w(])/, "\\.").replace(/\)\.\?\(([^\\[]+)\[\^/g, "?)\\.?($1(?<=\\.)[^\\.")}/*$`), r]) && o }), routes: n, async handle(e2, ...r) {
+      let a, o, t2 = new URL(e2.url);
+      e2.query = {}; if (t2.searchParams && t2.searchParams.forEach) { t2.searchParams.forEach((v, k) => { e2.query[k] = v; }); }
+      for (var [p, s, u] of n)
+        if ((p === e2.method || "ALL" === p) && (o = t2.pathname.match(s))) {
+          e2.params = o.groups;
+          for (var c of u)
+            if (void 0 !== (a = await c(e2.proxy || e2, ...r)))
+              return a;
         }
-        for (var [p, s, u] of n) {
-          if ((p === e2.method || "ALL" === p) && (o = t2.pathname.match(s))) {
-            e2.params = o.groups || {};
-            for (var c of u) {
-              if (void 0 !== (a = await c(e2.proxy || e2, ...r)))
-                return a;
-            }
-          }
-        }
-        return new Response("Not Found", { status: 404 });
-      }
-    };
+    } };
   }
-
   // src/index.js
   var import_cookie = __toESM(require_cookie());
   var import_cloudflare_worker_jwt2 = __toESM(require_cloudflare_worker_jwt());
@@ -1874,7 +1857,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
   }
 
   // 1. Root route
-  router.get("/", async (request) => {
+  async function handleRoot(request) {
     const lang = getI18n(request);
     if (ADMIN_PASSWORD) {
       const isAdmin = await checkAdminAuth(request);
@@ -1885,10 +1868,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     const newHash = genRandomStr(3);
     const u = new URL(request.url);
     return Response.redirect(`${u.origin}/${newHash}`, 302);
-  });
+  }
 
-  // 2. Admin Auth APIs
-  router.post("/api/login", async (request) => {
+  // 2. Admin Login
+  async function handleLogin(request) {
     if (!ADMIN_PASSWORD) {
       return returnJSON(400, "Private mode is not active.");
     }
@@ -1913,9 +1896,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     } catch (e) {
       return returnJSON(400, "Bad Request");
     }
-  });
+  }
 
-  router.post("/api/logout", async (request) => {
+  // 3. Admin Logout
+  async function handleLogout(request) {
     return returnJSON(0, { ok: true }, {
       "Set-Cookie": import_cookie.default.serialize("admin_token", "", {
         path: "/",
@@ -1924,10 +1908,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         sameSite: "lax"
       })
     });
-  });
+  }
 
-  // 3. Notes tree API for Sidebar
-  router.get("/api/notes", async (request) => {
+  // 4. Notes list for Sidebar
+  async function handleNotes(request) {
     if (ADMIN_PASSWORD) {
       const isAdmin = await checkAdminAuth(request);
       if (!isAdmin) {
@@ -1958,10 +1942,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     } catch (err) {
       return returnJSON(500, err.message);
     }
-  });
+  }
 
-  // 4. List View (/list)
-  router.get("/list", async (request) => {
+  // 5. Admin List View (/list)
+  async function handleList(request) {
     if (!LIST_SECRET) {
       return new Response("List view is disabled by administrator.", { status: 403 });
     }
@@ -2047,12 +2031,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     return new Response(html, {
       headers: { "Content-Type": "text/html;charset=UTF-8" }
     });
-  });
+  }
 
-  // 5. Share View (/share/:slug)
-  router.get(/^\/share\/(?<slug>[^/]+)\/*$/, async (request) => {
+  // 6. Share View (/share/:slug)
+  async function handleShareView(request, slug) {
     const lang = getI18n(request);
-    const slug = decodeURIComponent(request.params.slug);
     const rawShare = await kvGet(`share/${slug}`, "json");
     if (!rawShare) {
       return returnPage("Page404", { lang, title: "404 Share Not Found" });
@@ -2092,11 +2075,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       ext: metadata,
       isPrivateMode: !!ADMIN_PASSWORD
     });
-  });
+  }
 
-  // 6. Share Password Verification (/share/:slug/auth)
-  router.post(/^\/share\/(?<slug>[^/]+)\/auth\/*$/, async (request) => {
-    const slug = decodeURIComponent(request.params.slug);
+  // 7. Share Password Verification (/share/:slug/auth)
+  async function handleShareAuth(request, slug) {
     const lang = getI18n(request);
     const ip = request.headers.get("eo-client-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown_ip";
     const failsKey = `fails/share_${encodeURIComponent(ip)}_${encodeURIComponent(slug)}`;
@@ -2182,11 +2164,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
     const errMsg = lang === "zh" ? "提取码错误！" : "Access code incorrect!";
     return returnJSON(10002, errMsg);
-  });
+  }
 
-  // 7. Note Delete Endpoint (supports multi-level path)
-  router.post(/^\/(?<path>(?!api\/|share\/).+)\/delete\/*$/, async (request) => {
-    const path = decodeURIComponent(request.params.path);
+  // 8. Note Delete
+  async function handleNoteDelete(request, path) {
     const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
     const { metadata } = await queryNote(path);
 
@@ -2217,11 +2198,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     } catch (err) {
       return returnJSON(500, "Delete failed: " + err.message);
     }
-  });
+  }
 
-  // 8. Note Password Verification (supports multi-level path)
-  router.post(/^\/(?<path>(?!api\/|share\/).+)\/auth\/*$/, async (request) => {
-    const path = decodeURIComponent(request.params.path);
+  // 9. Note Auth (/:path/auth)
+  async function handleNoteAuth(request, path) {
     const lang = getI18n(request);
     const ip = request.headers.get("eo-client-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown_ip";
     const failsKey = `fails/${encodeURIComponent(ip)}_${encodeURIComponent(path)}`;
@@ -2301,11 +2281,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
     const errMsg = lang === "zh" ? "密码错误！" : "Password auth failed!";
     return returnJSON(10002, errMsg);
-  });
+  }
 
-  // 9. Note Password Setting (supports multi-level path)
-  router.post(/^\/(?<path>(?!api\/|share\/).+)\/pw\/*$/, async (request) => {
-    const path = decodeURIComponent(request.params.path);
+  // 10. Note Password Setting (/:path/pw)
+  async function handleNotePw(request, path) {
     if (ADMIN_PASSWORD) {
       const isAdmin = await checkAdminAuth(request);
       if (!isAdmin) return returnJSON(401, "Unauthorized");
@@ -2337,11 +2316,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       }
       return returnJSON(10003, "Password setting failed!");
     }
-  });
+  }
 
-  // 10. Note Setting Update (supports multi-level path)
-  router.post(/^\/(?<path>(?!api\/|share\/).+)\/setting\/*$/, async (request) => {
-    const path = decodeURIComponent(request.params.path);
+  // 11. Note Setting Update (/:path/setting)
+  async function handleNoteSetting(request, path) {
     if (ADMIN_PASSWORD) {
       const isAdmin = await checkAdminAuth(request);
       if (!isAdmin) return returnJSON(401, "Unauthorized");
@@ -2408,11 +2386,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       }
       return returnJSON(10004, "Update Setting failed: unauthorized note access");
     }
-  });
+    return returnJSON(400, "Expected JSON body");
+  }
 
-  // 11. Save Note Content (supports multi-level path)
-  router.post(/^\/(?<path>(?!api\/|share\/)[^/].*)\/*$/, async (request) => {
-    const path = decodeURIComponent(request.params.path);
+  // 12. Save Note Content (POST /:path)
+  async function handleNoteSave(request, path) {
     const { value, metadata } = await queryNote(path);
 
     if (ADMIN_PASSWORD) {
@@ -2440,12 +2418,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       console.error(error);
     }
     return returnJSON(10001, "Blob insert fail!");
-  });
+  }
 
-  // 12. View / Edit Note (supports multi-level path)
-  router.get(/^\/(?<path>(?!api\/|share\/|list)[^/].*)\/*$/, async (request) => {
+  // 13. View / Edit Note (GET /:path)
+  async function handleNoteView(request, path) {
     const lang = getI18n(request);
-    const path = decodeURIComponent(request.params.path);
     const title = path;
 
     if (ADMIN_PASSWORD) {
@@ -2486,15 +2463,89 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       });
     }
     return returnPage("NeedPasswd", { lang, title, isPrivateMode: false });
-  });
+  }
 
-  router.all("*", (request) => {
+  // Main dispatcher - zero complex regexes, 100% EdgeOne compliant
+  async function route(request) {
+    const url = new URL(request.url);
+    let pathname = url.pathname || "/";
+    while (pathname.length > 1 && pathname.endsWith("/")) {
+      pathname = pathname.slice(0, -1);
+    }
+    const method = request.method || "GET";
+
+    if (method === "GET" && pathname === "/") {
+      return handleRoot(request);
+    }
+    if (method === "POST" && pathname === "/api/login") {
+      return handleLogin(request);
+    }
+    if (method === "POST" && pathname === "/api/logout") {
+      return handleLogout(request);
+    }
+    if (method === "GET" && pathname === "/api/notes") {
+      return handleNotes(request);
+    }
+    if (method === "GET" && pathname === "/list") {
+      return handleList(request);
+    }
+
+    if (pathname.startsWith("/api/")) {
+      return returnJSON(404, "API endpoint not found");
+    }
+
+    if (pathname === "/share" || pathname.startsWith("/share/")) {
+      if (pathname === "/share") {
+        const lang = getI18n(request);
+        return returnPage("Page404", { lang, title: "404" });
+      }
+      const rest = pathname.slice(7);
+      if (method === "POST" && rest.endsWith("/auth")) {
+        const slug = decodeURIComponent(rest.slice(0, -5));
+        return handleShareAuth(request, slug);
+      }
+      if (method === "GET") {
+        const slug = decodeURIComponent(rest);
+        return handleShareView(request, slug);
+      }
+      const lang = getI18n(request);
+      return returnPage("Page404", { lang, title: "404" });
+    }
+
+    if (pathname.length > 1) {
+      if (method === "POST" && pathname.endsWith("/delete") && pathname.length > 8) {
+        const path = decodeURIComponent(pathname.slice(1, -7));
+        return handleNoteDelete(request, path);
+      }
+      if (method === "POST" && pathname.endsWith("/auth") && pathname.length > 6) {
+        const path = decodeURIComponent(pathname.slice(1, -5));
+        return handleNoteAuth(request, path);
+      }
+      if (method === "POST" && pathname.endsWith("/pw") && pathname.length > 4) {
+        const path = decodeURIComponent(pathname.slice(1, -3));
+        return handleNotePw(request, path);
+      }
+      if (method === "POST" && pathname.endsWith("/setting") && pathname.length > 9) {
+        const path = decodeURIComponent(pathname.slice(1, -8));
+        return handleNoteSetting(request, path);
+      }
+      if (method === "POST") {
+        const path = decodeURIComponent(pathname.slice(1));
+        return handleNoteSave(request, path);
+      }
+      if (method === "GET") {
+        const path = decodeURIComponent(pathname.slice(1));
+        return handleNoteView(request, path);
+      }
+    }
+
     const lang = getI18n(request);
     return returnPage("Page404", { lang, title: "404" });
-  });
+  }
 
   export default async function onRequest(context) {
-    const { request, env } = context;
+    const request = context?.request || (context instanceof Request ? context : null);
+    const env = context?.env || process?.env || {};
     SALT = env?.SCN_SALT || process.env?.SCN_SALT || "";
     SECRET = env?.SCN_SECRET || process.env?.SCN_SECRET || "";
     LIST_SECRET = env?.LIST_SECRET || process.env?.LIST_SECRET || "";
@@ -2502,15 +2553,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     KV = env?.notepad_kv || globalThis?.notepad_kv || null;
 
     try {
-      const res = await router.handle(request);
-      if (!res) {
-        return new Response("Router returned empty response for: " + request.url, { status: 404 });
-      }
-      return res;
+      const resp = await route(request);
+      return resp || new Response("Not Found", { status: 404 });
     } catch (err) {
-      console.error(err);
-      return new Response("Internal Edge Error: " + err.message + "\nStack: " + (err.stack || ""), {
-        headers: { "Content-Type": "text/plain;charset=UTF-8" }
-      });
+      console.error("onRequest error:", err);
+      return returnJSON(500, "Internal Error: " + err.message);
     }
   }
