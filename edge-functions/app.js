@@ -2758,7 +2758,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                   continue;
                 }
                 if (inCode) continue;
-                const match = line.match(new RegExp('^(#{1,6})\\s+(.+)$'));
+                const match = line.match(/^(#{1,6}) +(.+)$/);
                 if (match) {
                   const cleanText = match[2].trim().replace(/[*_~]/g, "").replace(new RegExp(String.fromCharCode(96), "g"), "");
                   items.push({
