@@ -1219,6 +1219,27 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22) !important;
         z-index: 1000 !important;
       }
+      .image-modal .modal-content {
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        bottom: auto !important;
+        right: auto !important;
+        transform: translate(-50%, -50%) !important;
+        margin: 0 !important;
+        width: 90% !important;
+        max-width: 680px !important;
+        max-height: 85vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 20px 24px !important;
+        box-sizing: border-box !important;
+        background: #ffffff !important;
+        border-radius: 12px !important;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22) !important;
+        z-index: 1002 !important;
+        overflow: hidden !important;
+      }
     </style>
 </head>
 <body>
@@ -1749,8 +1770,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 const safeName = item.filename.replace(/[^a-zA-Z0-9]/g, '_');
                 const sizeStr = item.size ? (item.size / 1024).toFixed(0) + " KB" : "";
                 return '<div class="img-card" id="img-card-' + safeName + '" style="border: 1px solid #e1e4e8; border-radius: 8px; overflow: hidden; background: #f6f8fa; display: flex; flex-direction: column;">' +
-                  '<div style="width: 100%; height: 110px; background-image: repeating-conic-gradient(#f0f0f0 0% 25%, #fff 0% 50%) 50% / 16px 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden;" title="点击插入到笔记" onclick="window.insertImageToNote(\'' + item.url + '\')">' +
-                    '<img src="' + item.url + '" style="max-width: 100%; max-height: 100%; object-fit: contain;" loading="lazy" />' +
+                  '<div class="img-preview-box" data-url="' + item.url + '" style="width: 100%; height: 110px; background-image: repeating-conic-gradient(#f0f0f0 0% 25%, #fff 0% 50%) 50% / 16px 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden;" title="点击插入到笔记">' +
+                    '<img src="' + item.url + '" style="max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none;" loading="lazy" />' +
                   '</div>' +
                   '<div style="padding: 6px 8px; background: #fff; border-top: 1px solid #e1e4e8; display: flex; flex-direction: column; gap: 4px;">' +
                     '<div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #57606a;">' +
@@ -1758,13 +1779,39 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                       '<span>' + sizeStr + '</span>' +
                     </div>' +
                     '<div style="display: flex; gap: 4px; margin-top: 2px;">' +
-                      '<button class="opt-button" style="flex: 1; padding: 2px 4px; font-size: 11px;" onclick="window.insertImageToNote(\'' + item.url + '\')">${SUPPORTED_LANG[lang].insertImg || "插入"}</button>' +
-                      '<button class="opt-button" style="padding: 2px 6px; font-size: 11px;" title="复制 Markdown" onclick="window.copyImageMd(\'' + item.url + '\')">📋</button>' +
-                      '<button class="opt-button" style="padding: 2px 6px; font-size: 11px; color: #cf222e;" title="删除图片" onclick="window.deleteManagedImage(\'' + item.filename + '\')">🗑️</button>' +
+                      '<button class="opt-button" data-action="insert" data-url="' + item.url + '" style="flex: 1; padding: 2px 4px; font-size: 11px;">${SUPPORTED_LANG[lang].insertImg || "插入"}</button>' +
+                      '<button class="opt-button" data-action="copy" data-url="' + item.url + '" style="padding: 2px 6px; font-size: 11px;" title="复制 Markdown">📋</button>' +
+                      '<button class="opt-button" data-action="delete" data-filename="' + item.filename + '" style="padding: 2px 6px; font-size: 11px; color: #cf222e;" title="删除图片">🗑️</button>' +
                     </div>' +
                   '</div>' +
                 '</div>';
               }).join("");
+
+              if (!grid._hasListener) {
+                grid._hasListener = true;
+                grid.addEventListener("click", function(e) {
+                  const insBtn = e.target.closest("[data-action='insert']");
+                  if (insBtn) {
+                    window.insertImageToNote(insBtn.getAttribute("data-url"));
+                    return;
+                  }
+                  const cpBtn = e.target.closest("[data-action='copy']");
+                  if (cpBtn) {
+                    window.copyImageMd(cpBtn.getAttribute("data-url"));
+                    return;
+                  }
+                  const delBtn = e.target.closest("[data-action='delete']");
+                  if (delBtn) {
+                    window.deleteManagedImage(delBtn.getAttribute("data-filename"));
+                    return;
+                  }
+                  const prevBox = e.target.closest(".img-preview-box");
+                  if (prevBox) {
+                    window.insertImageToNote(prevBox.getAttribute("data-url"));
+                    return;
+                  }
+                });
+              }
             } else {
               grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#cf222e;padding:20px;">加载失败: ' + (res.msg || "未知错误") + '</div>';
             }
@@ -1775,7 +1822,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
         window.openImageManager = function() {
           if (imgModal) {
-            imgModal.style.display = "flex";
+            imgModal.style.display = "block";
             loadImageManagerList();
           }
         };
