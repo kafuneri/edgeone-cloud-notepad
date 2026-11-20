@@ -617,6 +617,11 @@ const store = new Proxy({}, {
       setPW: "Set Password",
       changePW: "Change Password",
       share: "Share",
+      uploadImg: "Image",
+      uploading: "Compressing and uploading image...",
+      uploadSuccess: "Image uploaded successfully!",
+      uploadFail: "Image upload failed",
+      imgQuota: "Images: 200MB max",
       lastModified: "Last Modified",
       copy: "Copy",
       emptyPH: "There are many like it, but this one is mine...",
@@ -644,6 +649,11 @@ const store = new Proxy({}, {
       setPW: "设置密码",
       changePW: "修改密码",
       share: "分享",
+      uploadImg: "图片",
+      uploading: "正在压缩并上传图片...",
+      uploadSuccess: "图片上传成功！",
+      uploadFail: "图片上传失败",
+      imgQuota: "图片配额: 200MB",
       lastModified: "上次保存",
       copy: "复制",
       emptyPH: "看来你是第一个到这儿的人，写点什么吧...",
@@ -683,7 +693,9 @@ const store = new Proxy({}, {
                 ${!isPrivateMode ? `<button class="opt-button opt-pw">${pw ? SUPPORTED_LANG[lang].changePW : SUPPORTED_LANG[lang].setPW}</button>` : ""}
                 ${SWITCHER("Markdown", mode === "md", "opt-mode")}
                 <button class="opt-button opt-share-trigger" style="margin-left:6px;">${SUPPORTED_LANG[lang].share}</button>
+                <button id="opt-img-btn" class="opt-button" style="margin-left:6px;" title="${SUPPORTED_LANG[lang].uploadImg} (200MB)">${SUPPORTED_LANG[lang].uploadImg}</button>
                 <button id="opt-del-btn" class="opt-button" style="margin-left:6px;color:#cf222e;" title="${SUPPORTED_LANG[lang].delete}">${SUPPORTED_LANG[lang].delete}</button>
+                <input type="file" id="img-upload-input" accept="image/*" style="display:none;" />
             </div>
             ` : ""}
         <a class="github-link" title="Github" target="_blank" href="https://github.com/kafuneri/edgeone-cloud-notepad" rel="noreferrer">
@@ -1146,7 +1158,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         <div style="padding:16px;color:#8c959f;text-align:center;">${SUPPORTED_LANG[lang].searchNotes}</div>
       </div>
       <div class="sidebar-footer">
-        <span>${isPrivateMode ? SUPPORTED_LANG[lang].privateVault : SUPPORTED_LANG[lang].publicVault}</span>
+        <div style="display:flex; flex-direction:column; gap:2px; text-align:left;">
+          <span>${isPrivateMode ? SUPPORTED_LANG[lang].privateVault : SUPPORTED_LANG[lang].publicVault}</span>
+          <span id="sidebar-img-quota" style="font-size:11px; color:#8c959f;">配额: 200MB</span>
+        </div>
         ${isPrivateMode ? `<button id="sidebar-logout-btn" class="sidebar-logout-btn">${SUPPORTED_LANG[lang].logout}</button>` : ""}
       </div>
     </div>
@@ -1226,6 +1241,13 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
         async function loadNotes() {
           try {
+            fetch("/api/quota").then(r => r.json()).then(q => {
+              if (q.err === 0 && q.data) {
+                const qEl = document.getElementById("sidebar-img-quota");
+                if (qEl) qEl.textContent = "图片: " + q.data.usedMB + "MB / 200MB";
+              }
+            }).catch(() => {});
+
             const res = await fetch("/api/notes");
             const data = await res.json();
             if (data.err === 0 && Array.isArray(data.data)) {
@@ -1473,6 +1495,174 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       })();
     </script>
 
+    ${isEdit ? `
+    <script>
+      (function() {
+        const contents = document.querySelector("#contents");
+        const imgBtn = document.querySelector("#opt-img-btn");
+        const fileInput = document.querySelector("#img-upload-input");
+
+        function showUploadToast(text) {
+          let toast = document.getElementById("upload-toast");
+          if (!toast) {
+            toast = document.createElement("div");
+            toast.id = "upload-toast";
+            toast.style.cssText = "position:fixed;bottom:65px;right:24px;background:#1f2328;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,0.18);transition:all 0.2s;";
+            document.body.appendChild(toast);
+          }
+          toast.textContent = text;
+          toast.style.background = "#1f2328";
+          toast.style.opacity = "1";
+          return {
+            update: function(msg) { toast.textContent = msg; },
+            done: function(msg, isErr) {
+              toast.textContent = msg;
+              if (isErr) toast.style.background = "#cf222e";
+              setTimeout(function() {
+                toast.style.opacity = "0";
+                setTimeout(function() { if (toast.parentNode) toast.remove(); }, 300);
+              }, 2000);
+            }
+          };
+        }
+
+        function insertImageMarkdown(url) {
+          const mdImg = "\\n![](" + url + ")\\n";
+          if (window.vditorInstance) {
+            window.vditorInstance.insertValue(mdImg);
+          } else if (contents) {
+            const start = contents.selectionStart || 0;
+            const end = contents.selectionEnd || 0;
+            const text = contents.value || "";
+            contents.value = text.substring(0, start) + mdImg + text.substring(end);
+            contents.selectionStart = contents.selectionEnd = start + mdImg.length;
+            contents.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+        }
+
+        function compressImageToWebP(file, maxDimension, maxSizeBytes) {
+          maxDimension = maxDimension || 1920;
+          maxSizeBytes = maxSizeBytes || 1000 * 1024;
+          return new Promise(function(resolve, reject) {
+            if (file.type === "image/webp" && file.size <= maxSizeBytes) {
+              return resolve(file);
+            }
+            const reader = new FileReader();
+            reader.onerror = reject;
+            reader.onload = function(e) {
+              const img = new Image();
+              img.onerror = reject;
+              img.onload = function() {
+                let width = img.width;
+                let height = img.height;
+                if (width > maxDimension || height > maxDimension) {
+                  if (width > height) {
+                    height = Math.round((height * maxDimension) / width);
+                    width = maxDimension;
+                  } else {
+                    width = Math.round((width * maxDimension) / height);
+                    height = maxDimension;
+                  }
+                }
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob(function(blob) {
+                  if (!blob) return resolve(file);
+                  if (blob.size > maxSizeBytes) {
+                    canvas.toBlob(function(smallerBlob) {
+                      resolve(smallerBlob || blob);
+                    }, "image/webp", 0.65);
+                  } else {
+                    resolve(blob);
+                  }
+                }, "image/webp", 0.82);
+              };
+              img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+          });
+        }
+
+        async function processAndUpload(file) {
+          if (!file || !file.type.startsWith("image/")) {
+            alert("请选择图片文件");
+            return;
+          }
+          const toast = showUploadToast("${SUPPORTED_LANG[lang].uploading}");
+          try {
+            const webpBlob = await compressImageToWebP(file);
+            toast.update("正在上传到 EdgeOne Blob (配额 200MB)...");
+
+            const formData = new FormData();
+            formData.append("file", webpBlob, "image.webp");
+
+            const path = decodeURIComponent(window.location.pathname.replace(new RegExp('^/+', 'g'), ''));
+            const resp = await fetch("/api/upload", {
+              method: "POST",
+              headers: {
+                "x-note-path": encodeURIComponent(path)
+              },
+              body: formData
+            });
+            const result = await resp.json();
+            if (result.err === 0 && result.data && result.data.url) {
+              insertImageMarkdown(result.data.url);
+              toast.done("${SUPPORTED_LANG[lang].uploadSuccess} (" + (result.data.size / 1024).toFixed(0) + " KB)");
+            } else {
+              toast.done(result.msg || "${SUPPORTED_LANG[lang].uploadFail}", true);
+            }
+          } catch (err) {
+            console.error("Upload error:", err);
+            toast.done("${SUPPORTED_LANG[lang].uploadFail}: " + err.message, true);
+          }
+        }
+
+        window.processAndUploadImage = processAndUpload;
+
+        if (imgBtn && fileInput) {
+          imgBtn.onclick = function() { fileInput.click(); };
+          fileInput.onchange = function() {
+            if (this.files && this.files.length) {
+              processAndUpload(this.files[0]);
+              this.value = "";
+            }
+          };
+        }
+
+        // Paste event on textarea (Plain Text mode)
+        if (contents) {
+          contents.addEventListener("paste", function(e) {
+            const items = e.clipboardData && e.clipboardData.items;
+            if (!items) return;
+            for (let i = 0; i < items.length; i++) {
+              if (items[i].type.indexOf("image") !== -1) {
+                const file = items[i].getAsFile();
+                if (file) {
+                  e.preventDefault();
+                  processAndUpload(file);
+                  break;
+                }
+              }
+            }
+          });
+        }
+
+        // Drag & drop support
+        window.addEventListener("dragover", function(e) { e.preventDefault(); });
+        window.addEventListener("drop", function(e) {
+          const files = e.dataTransfer && e.dataTransfer.files;
+          if (files && files.length && files[0].type.startsWith("image/")) {
+            e.preventDefault();
+            processAndUpload(files[0]);
+          }
+        });
+      })();
+    <\/script>
+    ` : ""}
+
     ${isEdit && isMdMode ? `
     <script>
       (function() {
@@ -1489,6 +1679,15 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             toolbarConfig: { hide: true },
             toolbar: [],
             cache: { enable: false },
+            upload: {
+              accept: "image/*",
+              multiple: false,
+              handler: function(files) {
+                if (files && files.length && window.processAndUploadImage) {
+                  window.processAndUploadImage(files[0]);
+                }
+              }
+            },
             value: contents.value || "",
             input(val) {
               contents.value = val;
@@ -2484,6 +2683,191 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     return returnPage("NeedPasswd", { lang, title, isPrivateMode: false });
   }
 
+  // 14. Image Upload & Quota Management (200MB Limit)
+  function isImageBuffer(buffer) {
+    if (!buffer || buffer.byteLength < 12) return false;
+    const v = new Uint8Array(buffer);
+    // WebP: RIFF ... WEBP
+    if (v[0] === 0x52 && v[1] === 0x49 && v[2] === 0x46 && v[3] === 0x46 &&
+        v[8] === 0x57 && v[9] === 0x45 && v[10] === 0x42 && v[11] === 0x50) {
+      return "webp";
+    }
+    // PNG
+    if (v[0] === 0x89 && v[1] === 0x50 && v[2] === 0x4E && v[3] === 0x47) {
+      return "png";
+    }
+    // JPEG
+    if (v[0] === 0xFF && v[1] === 0xD8 && v[2] === 0xFF) {
+      return "jpeg";
+    }
+    // GIF
+    if (v[0] === 0x47 && v[1] === 0x49 && v[2] === 0x46) {
+      return "gif";
+    }
+    return false;
+  }
+
+  async function handleUpload(request) {
+    if (ADMIN_PASSWORD) {
+      const isAdmin = await checkAdminAuth(request);
+      if (!isAdmin) {
+        return returnJSON(401, "Unauthorized: Admin login required for uploads");
+      }
+    } else {
+      const notePath = request.headers.get("x-note-path") || "";
+      if (notePath) {
+        const { metadata } = await queryNote(decodeURIComponent(notePath));
+        if (metadata.pw) {
+          const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
+          const valid = await checkAuth(cookie, decodeURIComponent(notePath));
+          if (!valid) {
+            return returnJSON(403, "Password required to upload to this note");
+          }
+        }
+      }
+    }
+
+    try {
+      const ctype = request.headers.get("content-type") || "";
+      let fileBuffer = null;
+
+      if (ctype.includes("multipart/form-data")) {
+        const formData = await request.formData();
+        const file = formData.get("file") || formData.get("image");
+        if (!file) {
+          return returnJSON(400, "No file provided in form-data");
+        }
+        fileBuffer = await file.arrayBuffer();
+      } else {
+        fileBuffer = await request.arrayBuffer();
+      }
+
+      if (!fileBuffer || fileBuffer.byteLength === 0) {
+        return returnJSON(400, "Empty upload");
+      }
+
+      const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
+      if (fileBuffer.byteLength > MAX_FILE_SIZE) {
+        return returnJSON(413, `File exceeds 1MB limit (${(fileBuffer.byteLength / 1024).toFixed(0)} KB)`);
+      }
+
+      const imgType = isImageBuffer(fileBuffer);
+      if (!imgType) {
+        return returnJSON(400, "Invalid image format. Allowed: WebP, PNG, JPEG, GIF");
+      }
+
+      // Compute SHA-256 content hash (first 16 hex chars)
+      const hashBuffer = await crypto.subtle.digest("SHA-256", fileBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+      const filename = `${hashHex}.${imgType}`;
+
+      const MAX_QUOTA = 200 * 1024 * 1024; // 200 MB
+      const usageStr = await kvGet("stat/images_usage_bytes");
+      let currentUsage = parseInt(usageStr || "0", 10);
+      if (isNaN(currentUsage) || currentUsage < 0) currentUsage = 0;
+
+      // Check if image already exists (deduplication)
+      const existing = await store.get(`images/${filename}`, { type: "arrayBuffer", consistency: "eventual" });
+      if (!existing) {
+        if (currentUsage + fileBuffer.byteLength > MAX_QUOTA) {
+          const usedMB = (currentUsage / (1024 * 1024)).toFixed(1);
+          return returnJSON(413, `图片配额已满（当前已用 ${usedMB}MB / 上限 200MB）`);
+        }
+        await store.set(`images/${filename}`, fileBuffer, {
+          cacheControl: "public, max-age=31536000, immutable"
+        });
+        currentUsage += fileBuffer.byteLength;
+        await kvPut("stat/images_usage_bytes", String(currentUsage));
+      }
+
+      return returnJSON(0, {
+        url: `/api/images/${filename}`,
+        filename,
+        size: fileBuffer.byteLength,
+        usedMB: (currentUsage / (1024 * 1024)).toFixed(2),
+        quotaMB: 200
+      });
+    } catch (err) {
+      console.error("handleUpload error:", err);
+      return returnJSON(500, "Upload error: " + err.message);
+    }
+  }
+
+  async function handleImageGet(request, filename) {
+    if (!/^[a-zA-Z0-9_-]+\.(webp|png|jpe?g|gif)$/i.test(filename)) {
+      return new Response("Invalid image name", { status: 400 });
+    }
+
+    const ext = filename.split(".").pop().toLowerCase();
+    const mimeTypes = {
+      webp: "image/webp",
+      png: "image/png",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      gif: "image/gif"
+    };
+    const ctype = mimeTypes[ext] || "image/webp";
+
+    try {
+      const buf = await store.get(`images/${filename}`, { type: "arrayBuffer", consistency: "eventual" });
+      if (!buf) {
+        return new Response("Image Not Found", { status: 404 });
+      }
+      return new Response(buf, {
+        status: 200,
+        headers: {
+          "Content-Type": ctype,
+          "Cache-Control": "public, max-age=31536000, immutable"
+        }
+      });
+    } catch (err) {
+      console.error("handleImageGet error:", err);
+      return new Response("Failed to fetch image", { status: 500 });
+    }
+  }
+
+  async function handleQuota(request) {
+    const MAX_QUOTA = 200 * 1024 * 1024;
+    const usageStr = await kvGet("stat/images_usage_bytes");
+    let currentUsage = parseInt(usageStr || "0", 10);
+    if (isNaN(currentUsage) || currentUsage < 0) currentUsage = 0;
+
+    return returnJSON(0, {
+      usedBytes: currentUsage,
+      maxBytes: MAX_QUOTA,
+      usedMB: (currentUsage / (1024 * 1024)).toFixed(2),
+      maxMB: 200,
+      percent: ((currentUsage / MAX_QUOTA) * 100).toFixed(1) + "%"
+    });
+  }
+
+  async function handleImageDelete(request, filename) {
+    if (ADMIN_PASSWORD) {
+      const isAdmin = await checkAdminAuth(request);
+      if (!isAdmin) {
+        return returnJSON(401, "Unauthorized");
+      }
+    }
+    if (!/^[a-zA-Z0-9_-]+\.(webp|png|jpe?g|gif)$/i.test(filename)) {
+      return returnJSON(400, "Invalid image name");
+    }
+    try {
+      const buf = await store.get(`images/${filename}`, { type: "arrayBuffer", consistency: "strong" });
+      if (buf) {
+        const size = buf.byteLength;
+        await store.delete(`images/${filename}`);
+        const usageStr = await kvGet("stat/images_usage_bytes");
+        let currentUsage = Math.max(0, parseInt(usageStr || "0", 10) - size);
+        await kvPut("stat/images_usage_bytes", String(currentUsage));
+        return returnJSON(0, { freedBytes: size, remainingMB: (currentUsage / (1024 * 1024)).toFixed(2) });
+      }
+      return returnJSON(404, "Image not found");
+    } catch (err) {
+      return returnJSON(500, err.message);
+    }
+  }
+
   // Main dispatcher - zero complex regexes, 100% EdgeOne compliant
   async function route(request) {
     const url = new URL(request.url);
@@ -2504,6 +2888,22 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
     if (method === "GET" && pathname === "/api/notes") {
       return handleNotes(request);
+    }
+    if (method === "GET" && pathname === "/api/quota") {
+      return handleQuota(request);
+    }
+    if (method === "POST" && pathname === "/api/upload") {
+      return handleUpload(request);
+    }
+    if (pathname.startsWith("/api/images/")) {
+      const rest = pathname.slice(12);
+      if (method === "POST" && rest.endsWith("/delete")) {
+        const filename = rest.slice(0, -7);
+        return handleImageDelete(request, filename);
+      }
+      if (method === "GET") {
+        return handleImageGet(request, rest);
+      }
     }
     if (method === "GET" && pathname === "/list") {
       return handleList(request);
