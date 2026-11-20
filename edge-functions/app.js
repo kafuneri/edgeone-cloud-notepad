@@ -635,7 +635,6 @@ const store = getStore("notepad");
             <div class="opt">
                 <button class="opt-button opt-pw">${pw ? SUPPORTED_LANG[lang].changePW : SUPPORTED_LANG[lang].setPW}</button>
                 ${SWITCHER("Markdown", mode === "md", "opt-mode")}
-                ${mode === "md" ? `<button id="md-toggle-btn" class="opt-button" style="margin-left:8px;" title="${SUPPORTED_LANG[lang].tipDblClick}">${SUPPORTED_LANG[lang].edit}</button>` : ""}
                 ${SWITCHER(SUPPORTED_LANG[lang].share, share, "opt-share")}
             </div>
             ` : ""}
@@ -669,6 +668,7 @@ const store = getStore("notepad");
     <title>${title} — Cloud Notepad</title>
     <link href="${CDN_PREFIX}/favicon.ico" rel="shortcut icon" type="image/ico" />
     <link href="${CDN_PREFIX}/css/app.min.css" rel="stylesheet" media="screen" />
+    ${isEdit && isMdMode ? `<link href="//gcore.jsdelivr.net/npm/vditor@3.10.8/dist/index.css" rel="stylesheet" />` : ""}
     <style>
       #preview-md {
         line-height: 1.7;
@@ -767,6 +767,30 @@ const store = getStore("notepad");
       .stack .layer_1 .layer_2 .layer_3 .contents.hide {
         display: none !important;
       }
+      #vditor {
+        border: none !important;
+        background: transparent !important;
+        width: 100% !important;
+        min-height: calc(100vh - 120px) !important;
+      }
+      .vditor {
+        border: none !important;
+        background: transparent !important;
+      }
+      .vditor-toolbar {
+        display: none !important;
+      }
+      .vditor-ir {
+        background: transparent !important;
+      }
+      .vditor-ir pre.vditor-reset {
+        padding: 0 10px !important;
+        font-family: Arial, Helvetica, sans-serif !important;
+        font-size: 15px !important;
+        line-height: 1.7 !important;
+        color: #3a3b3c !important;
+        background: transparent !important;
+      }
     </style>
 </head>
 <body>
@@ -776,8 +800,10 @@ const store = getStore("notepad");
                 <div class="layer_2">
                     <div class="layer_3">
                         ${tips ? `<div class="tips">${tips}</div>` : ""}
-                        <textarea id="contents" class="contents full-width ${isEdit ? "" : "hide"}" spellcheck="true" placeholder="${SUPPORTED_LANG[lang].emptyPH}">${content}</textarea>
-                        ${tips || !isMdMode && isEdit ? "" : `<div id="preview-${ext.mode || "plain"}" class="contents full-width"></div>`}
+                        <textarea id="contents" class="contents full-width ${isEdit && !isMdMode ? "" : "hide"}" spellcheck="true" placeholder="${SUPPORTED_LANG[lang].emptyPH}">${content}</textarea>
+                        ${isEdit && isMdMode ? `<div id="vditor" class="contents full-width"></div>` : ""}
+                        ${!isEdit && isMdMode ? `<div id="preview-md" class="contents full-width"></div>` : ""}
+                        ${!isEdit && !isMdMode ? `<div id="preview-plain" class="contents full-width"></div>` : ""}
                     </div>
                 </div>
             </div>
@@ -786,8 +812,9 @@ const store = getStore("notepad");
     <div id="loading"></div>
     ${MODAL(lang)}
     ${FOOTER({ ...ext, isEdit, lang })}
-    ${isMdMode || ext.share ? `<script src="${CDN_PREFIX}/js/purify.min.js"><\/script>` : ""}
-    ${isMdMode ? `<script src="${CDN_PREFIX}/js/marked.min.js"><\/script>` : ""}
+    ${isEdit && isMdMode ? `<script src="//gcore.jsdelivr.net/npm/vditor@3.10.8/dist/index.min.js"><\/script>` : ""}
+    ${!isEdit && isMdMode || ext.share ? `<script src="${CDN_PREFIX}/js/purify.min.js"><\/script>` : ""}
+    ${!isEdit && isMdMode ? `<script src="${CDN_PREFIX}/js/marked.min.js"><\/script>` : ""}
     <script src="${CDN_PREFIX}/js/clip.min.js"><\/script>
     <script src="${CDN_PREFIX}/js/app.min.js"><\/script>
     ${showPwPrompt ? "<script>passwdPrompt()<\/script>" : ""}
@@ -795,75 +822,37 @@ const store = getStore("notepad");
     <script>
       (function() {
         const contents = document.querySelector("#contents");
-        const preview = document.querySelector("#preview-md");
-        const toggleBtn = document.querySelector("#md-toggle-btn");
-        const langTexts = {
-          edit: "${SUPPORTED_LANG[lang].edit}",
-          preview: "${SUPPORTED_LANG[lang].preview}",
-          tip: "${SUPPORTED_LANG[lang].tipDblClick}"
-        };
+        const vditorEl = document.querySelector("#vditor");
+        if (!contents || !vditorEl) return;
 
-        let isEditing = !contents.value.trim();
-
-        function syncView() {
-          if (isEditing) {
-            contents.classList.remove("hide");
-            contents.style.display = "block";
-            if (preview) preview.style.display = "none";
-            if (toggleBtn) {
-              toggleBtn.innerHTML = langTexts.preview;
-              toggleBtn.title = "";
-            }
-            contents.focus();
-          } else {
-            contents.classList.add("hide");
-            contents.style.display = "none";
-            if (preview) {
-              preview.style.display = "block";
-              if (window.DOMPurify && window.marked) {
-                preview.innerHTML = DOMPurify.sanitize(marked.parse(contents.value || ""));
-              }
-            }
-            if (toggleBtn) {
-              toggleBtn.innerHTML = langTexts.edit;
-              toggleBtn.title = langTexts.tip;
-            }
-          }
-        }
-
-        if (toggleBtn) {
-          toggleBtn.onclick = function() {
-            isEditing = !isEditing;
-            syncView();
-          };
-        }
-
-        if (preview) {
-          preview.ondblclick = function() {
-            isEditing = true;
-            syncView();
-          };
-          preview.title = langTexts.tip;
-        }
-
-        if (contents) {
-          contents.addEventListener("keydown", function(e) {
-            if (e.key === "Escape" || (e.key === "Enter" && (e.ctrlKey || e.metaKey))) {
-              if (isEditing && contents.value.trim()) {
-                isEditing = false;
-                syncView();
+        function initVditor() {
+          window.vditorInstance = new Vditor("vditor", {
+            mode: "ir",
+            cdn: "//gcore.jsdelivr.net/npm/vditor@3.10.8",
+            height: "calc(100vh - 120px)",
+            placeholder: contents.getAttribute("placeholder") || "",
+            toolbarConfig: { hide: true },
+            toolbar: [],
+            cache: { enable: false },
+            value: contents.value || "",
+            input(val) {
+              contents.value = val;
+              if (typeof contents.oninput === "function") {
+                contents.oninput();
+              } else {
+                contents.dispatchEvent(new Event("input", { bubbles: true }));
               }
             }
           });
         }
 
-        if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", syncView);
+        if (typeof Vditor !== "undefined") {
+          initVditor();
         } else {
-          syncView();
+          window.addEventListener("load", initVditor);
         }
       })();
-    </script>
+    <\/script>
     ` : ""}
 </body>
 </html>
@@ -1097,19 +1086,41 @@ const store = getStore("notepad");
   });
   router.post("/:path/auth", async (request) => {
     const { path } = request.params;
+    const lang = getI18n(request);
     const ip = request.headers.get("eo-client-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || request.headers.get("cf-connecting-ip") || "unknown_ip";
-    const blockKey = `blocks/${ip}`;
-    const failsKey = `fails/${ip}`;
+    
+    // 细粒度隔离：绑定 IP 与当前笔记路径，避免误伤同 IP 下的其他笔记
+    const failsKey = `fails/${encodeURIComponent(ip)}_${encodeURIComponent(path)}`;
+    const now = Date.now();
 
-    if (ipFailMap.has(ip) && ipFailMap.get(ip) >= 5) {
-      return returnJSON(10005, "IP is blocked due to too many failed attempts");
+    // 1. 读取当前失败记录与冷却时间
+    let failRecord = null;
+    try {
+      failRecord = await store.get(failsKey, { type: "json", consistency: "strong" });
+    } catch (e) {}
+
+    let fails = 0;
+    let unlockAt = 0;
+
+    if (failRecord && failRecord.expireAt && now < failRecord.expireAt) {
+      fails = parseInt(failRecord.count || "0");
+      unlockAt = parseInt(failRecord.unlockAt || "0");
     }
 
-    const isBlocked = await store.get(blockKey, { consistency: "strong" });
-    if (isBlocked) {
-      return returnJSON(10005, "IP is blocked due to too many failed attempts (Blob checked)");
+    // 2. 检查是否仍处于阶梯冷却锁定期中
+    if (unlockAt > now) {
+      const waitSeconds = Math.ceil((unlockAt - now) / 1000);
+      const msg = lang === "zh" 
+        ? `密码错误次数过多，请等待 ${waitSeconds} 秒后再试`
+        : `Too many failed attempts. Please wait ${waitSeconds}s before retrying.`;
+      return new Response(JSON.stringify({ err: 429, msg, retryAfter: waitSeconds }), {
+        status: 429,
+        headers: { "Content-Type": "application/json;charset=UTF-8" }
+      });
     }
 
+    // 3. 校验密码
+    let isPasswordCorrect = false;
     if (request.headers.get("Content-Type") === "application/json") {
       const { passwd } = await request.json();
       const { metadata } = await queryNote(path);
@@ -1117,33 +1128,59 @@ const store = getStore("notepad");
       if (metadata.pw) {
         const storePw = await saltPw(passwd);
         if (metadata.pw === storePw) {
-          await store.delete(failsKey);
-          ipFailMap.delete(ip);
-          
-          const token = await import_cloudflare_worker_jwt2.default.sign({ path }, SECRET);
-          return returnJSON(0, { refresh: true }, {
-            "Set-Cookie": import_cookie.default.serialize("auth", token, {
-              path: `/${encodeURI(path)}`,
-              expires: (0, import_dayjs2.default)().add(7, "day").toDate(),
-              httpOnly: true
-            })
-          });
+          isPasswordCorrect = true;
         }
       }
     }
 
-    let fails = parseInt(await store.get(failsKey, { consistency: "strong" }) || "0");
-    fails++;
-    ipFailMap.set(ip, fails);
-    
-    if (fails >= 5) {
-      await store.set(blockKey, "1");
-      await store.delete(failsKey);
-    } else {
-      await store.set(failsKey, fails.toString());
+    // 4. 密码正确：立即重置计数，颁发 Token
+    if (isPasswordCorrect) {
+      try {
+        await store.delete(failsKey);
+      } catch (e) {}
+      
+      const token = await import_cloudflare_worker_jwt2.default.sign({ path }, SECRET);
+      return returnJSON(0, { refresh: true }, {
+        "Set-Cookie": import_cookie.default.serialize("auth", token, {
+          path: `/${encodeURI(path)}`,
+          expires: (0, import_dayjs2.default)().add(7, "day").toDate(),
+          httpOnly: true
+        })
+      });
     }
 
-    return returnJSON(10002, "Password auth failed!");
+    // 5. 密码错误：递增失败计数并计算阶梯冷却时间
+    fails++;
+    let cooldown = 0;
+    if (fails === 4) cooldown = 5;         // 第4次：冷却 5 秒
+    else if (fails === 5) cooldown = 30;   // 第5次：冷却 30 秒
+    else if (fails === 6) cooldown = 120;  // 第6次：冷却 2 分钟
+    else if (fails >= 7) cooldown = 900;   // 第7次及以上：冷却 15 分钟
+
+    const newUnlockAt = cooldown > 0 ? now + (cooldown * 1000) : 0;
+    // 整体记录保留 30 分钟无尝试后完全重置
+    const recordExpireAt = now + 1800 * 1000;
+
+    try {
+      await store.setJSON(failsKey, {
+        count: fails,
+        unlockAt: newUnlockAt,
+        expireAt: recordExpireAt
+      });
+    } catch (e) {}
+
+    if (cooldown > 0) {
+      const msg = lang === "zh"
+        ? `密码错误！已连续输错 ${fails} 次，请等待 ${cooldown} 秒后再试`
+        : `Password auth failed! Too many attempts (${fails}), please wait ${cooldown}s before retrying.`;
+      return new Response(JSON.stringify({ err: 429, msg, retryAfter: cooldown }), {
+        status: 429,
+        headers: { "Content-Type": "application/json;charset=UTF-8" }
+      });
+    }
+
+    const errMsg = lang === "zh" ? "密码错误！" : "Password auth failed!";
+    return returnJSON(10002, errMsg);
   });
   router.post("/:path/pw", async (request) => {
     const { path } = request.params;
