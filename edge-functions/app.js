@@ -2649,8 +2649,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     const charset = "2345679abcdefghjkmnpqrstwxyz";
     return Array(n).join().split(",").map(() => charset.charAt(Math.floor(Math.random() * charset.length))).join("");
   };
-  function returnPage(type, data) {
+  function returnPage(type, data, status) {
+    const defaultStatus = type === "Page404" ? 404 : 200;
     return new Response(template_exports[type](data), {
+      status: status !== undefined ? status : defaultStatus,
       headers: {
         "content-type": "text/html;charset=UTF-8"
       }
