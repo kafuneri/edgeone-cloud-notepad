@@ -2108,7 +2108,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           const enCount = enMatches ? enMatches.length : 0;
           const words = cnCount + enCount;
           const chars = text.length;
-          const lines = text ? text.split("\n").length : 0;
+          const lines = text ? text.split(String.fromCharCode(10)).length : 0;
           countEl.textContent = "${SUPPORTED_LANG[lang].wordsCount || '字数'}: " + words + " · ${SUPPORTED_LANG[lang].charsCount || '字符'}: " + chars + " · " + lines + " ${SUPPORTED_LANG[lang].linesCount || '行'}";
         };
 
@@ -2129,7 +2129,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         const draftMsg = document.getElementById("draft-alert-msg");
         const restoreBtn = document.getElementById("draft-restore-btn");
         const discardBtn = document.getElementById("draft-discard-btn");
-        const currentPath = window.location.pathname.replace(/^\/+|\/+$/g, "");
+        const currentPath = decodeURIComponent(window.location.pathname.replace(new RegExp('^/+|/+$', 'g'), ''));
         const isEditPage = ${Boolean(isEdit)};
 
         if (isEditPage && contents && draftAlert && currentPath && !currentPath.startsWith("api") && !currentPath.startsWith("share")) {
