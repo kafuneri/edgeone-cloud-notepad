@@ -674,7 +674,17 @@ const store = new Proxy({}, {
       shareBurnLabel: "Burn After Reading (Destroyed after 1st view)",
       burnAlertTip: "Notice: This note was shared with burn-after-reading. It has been destroyed on the server and cannot be viewed again once you close or refresh this page.",
       burnBadge: "Burn After Reading",
-      rawDirectLink: "Raw"
+      rawDirectLink: "Raw",
+      tocTitle: "Table of Contents",
+      tocButton: "TOC",
+      exportZip: "Export Vault (.zip)",
+      exportingList: "Fetching notes...",
+      loadingZipLib: "Loading ZIP engine...",
+      exportingProgress: "Packaging",
+      generatingZip: "Compressing archive...",
+      exportSuccess: "Backup downloaded!",
+      exportFail: "Export failed",
+      noNotesToExport: "No notes found in vault to export"
     },
     "zh": {
       setPW: "设置密码",
@@ -721,6 +731,16 @@ const store = new Proxy({}, {
       burnAlertTip: "注意：此笔记为阅后即焚分享，已在服务器端永久销毁，刷新或关闭此页面后将无法再次访问。",
       burnBadge: "阅后即焚",
       rawDirectLink: "Raw",
+      tocTitle: "大纲目录",
+      tocButton: "大纲",
+      exportZip: "导出全库备份 (.zip)",
+      exportingList: "正在获取笔记列表...",
+      loadingZipLib: "正在加载压缩组件...",
+      exportingProgress: "打包中",
+      generatingZip: "正在生成压缩包...",
+      exportSuccess: "导出成功！",
+      exportFail: "导出失败",
+      noNotesToExport: "当前库中暂无笔记可供导出",
       privateVault: "私有笔记库",
       publicVault: "公共便签",
       logout: "退出登录",
@@ -887,6 +907,41 @@ var LIGHTBOX = () => `
 <div id="img-lightbox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:99999; align-items:center; justify-content:center; cursor:zoom-out; backdrop-filter:blur(4px); transition:opacity 0.2s ease;">
     <img id="lightbox-img" src="" style="max-width:92vw; max-height:92vh; object-fit:contain; border-radius:6px; box-shadow:0 8px 32px rgba(0,0,0,0.6);" />
     <span style="position:fixed; top:20px; right:25px; color:#fff; font-size:26px; cursor:pointer; opacity:0.8; user-select:none;">✕</span>
+</div>
+`;
+var TOC_PANEL = (lang) => `
+<!-- Floating TOC Toggle Button -->
+<button id="toc-toggle-btn" class="toc-toggle-btn" style="display:none;" title="${SUPPORTED_LANG[lang].tocTitle || '大纲目录'}">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="8" y1="6" x2="21" y2="6"></line>
+        <line x1="8" y1="12" x2="21" y2="12"></line>
+        <line x1="8" y1="18" x2="21" y2="18"></line>
+        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+    </svg>
+    <span>${SUPPORTED_LANG[lang].tocButton || '大纲'}</span>
+    <span id="toc-badge" class="toc-badge">0</span>
+</button>
+
+<!-- Floating TOC Panel -->
+<div id="toc-panel" class="toc-panel" style="display:none;">
+    <div class="toc-header">
+        <div style="display:flex; align-items:center; gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+            <span style="font-weight:600; font-size:13px; color:#1f2328;">${SUPPORTED_LANG[lang].tocTitle || '大纲目录'}</span>
+        </div>
+        <span id="toc-close-btn" class="close-btn" style="cursor:pointer; font-size:16px; color:#57606a; padding:2px 4px; line-height:1;">✕</span>
+    </div>
+    <div id="toc-list" class="toc-list">
+    </div>
 </div>
 `;
 var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPrivateMode }) => {
@@ -1357,6 +1412,120 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         align-items: center !important;
         gap: 6px !important;
       }
+      /* TOC Floating Button & Panel */
+      .toc-toggle-btn {
+        position: fixed;
+        top: 14px;
+        right: 14px;
+        height: 32px;
+        padding: 0 10px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid #d0d7de;
+        color: #57606a;
+        display: none;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        z-index: 990;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        transition: all 0.2s ease;
+        font-size: 13px;
+        font-weight: 500;
+        user-select: none;
+      }
+      .toc-toggle-btn:hover {
+        background: #ffffff;
+        color: #0969da;
+        border-color: #8c959f;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+      }
+      .toc-badge {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 1px 6px;
+        border-radius: 10px;
+        background: #f0f6fc;
+        color: #0969da;
+        border: 1px solid #d0d7de;
+        line-height: 1.2;
+      }
+      .toc-panel {
+        position: fixed;
+        top: 52px;
+        right: 14px;
+        width: 250px;
+        max-height: calc(85vh - 60px);
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        display: none;
+        flex-direction: column;
+        z-index: 995;
+        overflow: hidden;
+        animation: tocSlideDown 0.15s ease-out;
+      }
+      @keyframes tocSlideDown {
+        from { opacity: 0; transform: translateY(-6px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .toc-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        border-bottom: 1px solid #e1e4e8;
+        background: #f6f8fa;
+        user-select: none;
+      }
+      .toc-list {
+        padding: 8px 6px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        max-height: calc(85vh - 110px);
+      }
+      .toc-item {
+        display: block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        line-height: 1.4;
+        color: #57606a;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .toc-item:hover {
+        background: #f0f6fc;
+        color: #0969da;
+      }
+      .toc-item.active {
+        background: #e7f2fa;
+        color: #0969da;
+        font-weight: 600;
+      }
+      .toc-item.h1 { font-weight: 600; color: #1f2328; padding-left: 8px; }
+      .toc-item.h2 { font-weight: 500; color: #24292f; padding-left: 18px; }
+      .toc-item.h3 { color: #57606a; padding-left: 28px; }
+      .toc-item.h4 { color: #6e7781; padding-left: 36px; font-size: 11px; }
+      .toc-item.h5 { color: #8c959f; padding-left: 44px; font-size: 11px; }
+      .toc-item.h6 { color: #8c959f; padding-left: 52px; font-size: 11px; }
+
+      /* Sidebar full vault export button */
+      .sidebar-export-btn:hover {
+        background: #f3f4f6 !important;
+        border-color: #8c959f !important;
+        color: #0969da !important;
+      }
+      .sidebar-export-btn:active {
+        background: #ebedf0 !important;
+      }
     </style>
 </head>
 <body>
@@ -1376,6 +1545,16 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       </div>
       <div class="sidebar-tree" id="sidebar-tree">
         <div style="padding:16px;color:#8c959f;text-align:center;">${SUPPORTED_LANG[lang].searchNotes}</div>
+      </div>
+      <div class="sidebar-backup-box" style="padding: 10px 14px; border-top: 1px solid #e1e4e8; background: #ffffff;">
+        <button id="sidebar-export-zip-btn" class="sidebar-export-btn" type="button" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 12px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; font-size: 12px; color: #24292f; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span id="sidebar-export-text">${SUPPORTED_LANG[lang].exportZip || "导出全库备份 (.zip)"}</span>
+        </button>
       </div>
       <div class="sidebar-footer">
         <div style="display:flex; flex-direction:column; gap:2px; text-align:left;">
@@ -1416,10 +1595,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     ${IMAGE_MODAL(lang)}
     ${HISTORY_MODAL(lang)}
     ${LIGHTBOX()}
+    ${TOC_PANEL(lang)}
     ${FOOTER({ ...ext, isEdit, lang, isPrivateMode, path: title })}
     ${isEdit && isMdMode ? `<script src="//gcore.jsdelivr.net/npm/vditor@3.10.8/dist/index.min.js"><\/script>` : ""}
     ${!isEdit && isMdMode || ext.share ? `<script src="${CDN_PREFIX}/js/purify.min.js"><\/script>` : ""}
     ${!isEdit && isMdMode ? `<script src="${CDN_PREFIX}/js/marked.min.js"><\/script>` : ""}
+    <script src="//gcore.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"><\/script>
     <script src="${CDN_PREFIX}/js/clip.min.js"><\/script>
     <script src="${CDN_PREFIX}/js/app.min.js"><\/script>
     ${showPwPrompt ? "<script>passwdPrompt()<\/script>" : ""}
@@ -1616,6 +1797,88 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             const currentPath = decodeURIComponent(window.location.pathname.replace(new RegExp('^/+', 'g'), ''));
             if (currentPath) {
               window.deleteNote(encodeURIComponent(currentPath));
+            }
+          };
+        }
+
+        // --- 1.1 Full Vault Backup ZIP Export Logic ---
+        const exportZipBtn = document.getElementById("sidebar-export-zip-btn");
+        const exportZipText = document.getElementById("sidebar-export-text");
+        if (exportZipBtn) {
+          exportZipBtn.onclick = async function() {
+            if (exportZipBtn.dataset.busy === "1") return;
+            exportZipBtn.dataset.busy = "1";
+            exportZipBtn.style.opacity = "0.7";
+            const originalText = "${SUPPORTED_LANG[lang].exportZip || '导出全库备份 (.zip)'}";
+
+            try {
+              if (exportZipText) exportZipText.textContent = "${SUPPORTED_LANG[lang].exportingList || '正在获取笔记列表...'}";
+              const res = await fetch("/api/notes");
+              const data = await res.json();
+              if (data.err !== 0 || !Array.isArray(data.data) || data.data.length === 0) {
+                alert(data.msg || "${SUPPORTED_LANG[lang].noNotesToExport || '当前库中暂无笔记可供导出'}");
+                return;
+              }
+
+              const notes = data.data;
+              if (exportZipText) exportZipText.textContent = "${SUPPORTED_LANG[lang].loadingZipLib || '正在加载压缩组件...'}";
+              let JSZipLib = window.JSZip;
+              if (!JSZipLib) {
+                await new Promise((resolve, reject) => {
+                  const s = document.createElement("script");
+                  s.src = "//gcore.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
+                  s.onload = () => resolve();
+                  s.onerror = () => reject(new Error("Failed to load JSZip"));
+                  document.head.appendChild(s);
+                });
+                JSZipLib = window.JSZip;
+              }
+
+              const zip = new JSZipLib();
+              for (let i = 0; i < notes.length; i++) {
+                const n = notes[i];
+                if (exportZipText) exportZipText.textContent = "${SUPPORTED_LANG[lang].exportingProgress || '打包中'} (" + (i + 1) + "/" + notes.length + ")...";
+                try {
+                  const cleanPath = n.path.replace(/^\/+/, "");
+                  const rawResp = await fetch("/raw/" + encodeURI(cleanPath));
+                  if (rawResp.ok) {
+                    const rawText = await rawResp.text();
+                    let filePath = cleanPath;
+                    if (!filePath.endsWith(".md") && !filePath.endsWith(".txt")) {
+                      filePath += ".md";
+                    }
+                    zip.file(filePath, rawText);
+                  }
+                } catch (e) {
+                  console.warn("Export note error:", n.path, e);
+                }
+              }
+
+              if (exportZipText) exportZipText.textContent = "${SUPPORTED_LANG[lang].generatingZip || '正在生成压缩包...'}";
+              const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+              const dateStr = new Date().toISOString().slice(0, 10);
+              const filename = "notepad-backup-" + dateStr + ".zip";
+              const downloadUrl = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = downloadUrl;
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(downloadUrl);
+              }, 2000);
+
+              if (exportZipText) exportZipText.textContent = "${SUPPORTED_LANG[lang].exportSuccess || '导出成功！'}";
+              setTimeout(() => {
+                if (exportZipText) exportZipText.textContent = originalText;
+              }, 3000);
+            } catch (err) {
+              alert(("${SUPPORTED_LANG[lang].exportFail || '导出失败'}: ") + err.message);
+              if (exportZipText) exportZipText.textContent = originalText;
+            } finally {
+              exportZipBtn.dataset.busy = "0";
+              exportZipBtn.style.opacity = "1";
             }
           };
         }
@@ -2129,6 +2392,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               }
             },
             value: contents.value || "",
+            after() {
+              if (typeof window.updateToc === "function") {
+                window.updateToc(contents.value);
+              }
+            },
             input(val) {
               contents.value = val;
               if (typeof window.updateWordCount === "function") {
@@ -2136,6 +2404,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               }
               if (typeof window.triggerDraftSave === "function") {
                 window.triggerDraftSave(val);
+              }
+              if (typeof window.updateToc === "function") {
+                window.updateToc(val);
               }
               if (typeof contents.oninput === "function") {
                 contents.oninput();
@@ -2192,6 +2463,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             if (typeof window.triggerDraftSave === "function") {
               window.triggerDraftSave(contents.value);
             }
+            if (typeof window.updateToc === "function") {
+              window.updateToc(contents.value);
+            }
           });
         }
 
@@ -2244,6 +2518,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                       window.vditorInstance.setValue(data.content);
                     }
                     window.updateWordCount(data.content);
+                    if (typeof window.updateToc === "function") {
+                      window.updateToc(data.content);
+                    }
                     if (typeof contents.oninput === "function") {
                       contents.oninput();
                     } else {
@@ -2408,6 +2685,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                     window.vditorInstance.setValue(snapContent);
                   }
                   window.updateWordCount(snapContent);
+                  if (typeof window.updateToc === "function") {
+                    window.updateToc(snapContent);
+                  }
                   if (typeof contents.oninput === "function") {
                     contents.oninput();
                   } else if (contents) {
@@ -2423,6 +2703,173 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           } catch(err) {
             if (previewBox) previewBox.value = "读取快照异常: " + err.message;
           }
+        }
+
+        // --- 4. Markdown Floating Table of Contents (TOC) ---
+        const tocToggleBtn = document.getElementById("toc-toggle-btn");
+        const tocBadge = document.getElementById("toc-badge");
+        const tocPanel = document.getElementById("toc-panel");
+        const tocCloseBtn = document.getElementById("toc-close-btn");
+        const tocList = document.getElementById("toc-list");
+
+        function getRawMarkdown(overrideText) {
+          if (typeof overrideText === "string") return overrideText;
+          if (window.vditorInstance && typeof window.vditorInstance.getValue === "function") {
+            return window.vditorInstance.getValue();
+          }
+          if (contents && contents.value !== undefined) return contents.value;
+          return "";
+        }
+
+        window.updateToc = function(overrideText) {
+          if (!tocList || !tocToggleBtn || !tocBadge) return;
+
+          let items = [];
+
+          // 1. If in preview mode with rendered DOM headers
+          if (previewMd && previewMd.children.length > 0) {
+            const domHeadings = previewMd.querySelectorAll("h1, h2, h3, h4, h5, h6");
+            if (domHeadings.length > 0) {
+              domHeadings.forEach((h, idx) => {
+                const level = parseInt(h.tagName.substring(1), 10) || 1;
+                const text = (h.innerText || h.textContent || "").trim();
+                if (text) {
+                  items.push({
+                    level,
+                    text,
+                    element: h,
+                    index: idx
+                  });
+                }
+              });
+            }
+          }
+
+          // 2. If no DOM headings (or in edit mode), parse from markdown text
+          if (items.length === 0) {
+            const raw = getRawMarkdown(overrideText);
+            if (raw) {
+              const lines = raw.split("\n");
+              let inCode = false;
+              for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                if (line.trim().startsWith(String.fromCharCode(96, 96, 96))) {
+                  inCode = !inCode;
+                  continue;
+                }
+                if (inCode) continue;
+                const match = line.match(/^(#{1,6})\s+(.+)$/);
+                if (match) {
+                  const cleanText = match[2].trim().replace(/[*_~]/g, "").replace(new RegExp(String.fromCharCode(96), "g"), "");
+                  items.push({
+                    level: match[1].length,
+                    text: cleanText,
+                    lineIndex: i,
+                    raw: line,
+                    index: items.length
+                  });
+                }
+              }
+            }
+          }
+
+          // Update badge and toggle button visibility
+          if (items.length === 0) {
+            tocToggleBtn.style.display = "none";
+            if (tocPanel) tocPanel.style.display = "none";
+            tocList.innerHTML = "";
+            return;
+          }
+
+          tocToggleBtn.style.display = "flex";
+          tocBadge.textContent = items.length;
+
+          // Render items into tocList
+          let html = "";
+          items.forEach((item, idx) => {
+            const safeText = item.text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            html += '<a class="toc-item h' + item.level + '" data-toc-idx="' + idx + '" title="' + safeText + '">' + safeText + '</a>';
+          });
+          tocList.innerHTML = html;
+
+          // Click handler for jumping
+          const links = tocList.querySelectorAll(".toc-item");
+          links.forEach((link) => {
+            link.onclick = function(e) {
+              e.preventDefault();
+              links.forEach(l => l.classList.remove("active"));
+              link.classList.add("active");
+              const idx = parseInt(link.getAttribute("data-toc-idx"), 10);
+              const item = items[idx];
+              if (!item) return;
+
+              // Jump in preview mode
+              if (item.element) {
+                item.element.scrollIntoView({ behavior: "smooth", block: "start" });
+                return;
+              }
+
+              // Jump in Vditor DOM if headings are present
+              const vditorHeadings = document.querySelectorAll(".vditor-reset h1, .vditor-reset h2, .vditor-reset h3, .vditor-reset h4, .vditor-reset h5, .vditor-reset h6");
+              if (vditorHeadings.length > idx) {
+                vditorHeadings[idx].scrollIntoView({ behavior: "smooth", block: "center" });
+                return;
+              }
+
+              // Jump in textarea
+              if (contents && item.lineIndex !== undefined) {
+                const lines = contents.value.split("\n");
+                let offset = 0;
+                for (let j = 0; j < item.lineIndex; j++) {
+                  offset += lines[j].length + 1;
+                }
+                contents.focus();
+                contents.setSelectionRange(offset, offset + item.raw.length);
+                const approxLineHeight = 22;
+                contents.scrollTop = Math.max(0, item.lineIndex * approxLineHeight - 100);
+              }
+            };
+          });
+        };
+
+        if (tocToggleBtn) {
+          tocToggleBtn.onclick = function(e) {
+            e.stopPropagation();
+            if (!tocPanel) return;
+            const isVisible = tocPanel.style.display === "flex";
+            tocPanel.style.display = isVisible ? "none" : "flex";
+          };
+        }
+        if (tocCloseBtn) {
+          tocCloseBtn.onclick = function(e) {
+            e.stopPropagation();
+            if (tocPanel) tocPanel.style.display = "none";
+          };
+        }
+        document.addEventListener("click", function(e) {
+          if (tocPanel && tocPanel.style.display === "flex") {
+            if (!tocPanel.contains(e.target) && !tocToggleBtn.contains(e.target)) {
+              tocPanel.style.display = "none";
+            }
+          }
+        });
+
+        // Trigger TOC initialization
+        setTimeout(function() {
+          window.updateToc();
+        }, 300);
+        window.addEventListener("load", function() {
+          setTimeout(function() { window.updateToc(); }, 300);
+        });
+
+        // Preview mode observer to update TOC when markdown renders
+        if (previewMd) {
+          try {
+            const previewObserver = new MutationObserver(function() {
+              window.updateToc();
+            });
+            previewObserver.observe(previewMd, { childList: true, subtree: true });
+          } catch(e) {}
         }
       })();
     <\/script>
