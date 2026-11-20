@@ -2768,7 +2768,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       if (isNaN(currentUsage) || currentUsage < 0) currentUsage = 0;
 
       // Check if image already exists (deduplication)
-      const existing = await store.get(`images/${filename}`, { type: "arrayBuffer", consistency: "eventual" });
+      const existing = await store.get(`images/${filename}`, { type: "arrayBuffer", consistency: "strong" });
       if (!existing) {
         if (currentUsage + fileBuffer.byteLength > MAX_QUOTA) {
           const usedMB = (currentUsage / (1024 * 1024)).toFixed(1);
@@ -2810,7 +2810,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     const ctype = mimeTypes[ext] || "image/webp";
 
     try {
-      const buf = await store.get(`images/${filename}`, { type: "arrayBuffer", consistency: "eventual" });
+      const buf = await store.get(`images/${filename}`, { type: "arrayBuffer", consistency: "strong" });
       if (!buf) {
         return new Response("Image Not Found", { status: 404 });
       }
