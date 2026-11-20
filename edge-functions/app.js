@@ -1863,9 +1863,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                         '<span>' + sizeStr + '</span>',
                       '</div>',
                       '<div style="display: flex; gap: 4px; margin-top: 2px;">',
-                        '<button class="opt-button" data-action="insert" data-url="' + item.url + '" style="flex: 1; padding: 2px 4px; font-size: 11px;">${SUPPORTED_LANG[lang].insertImg || "插入"}</button>',
-                        '<button class="opt-button" data-action="copy" data-url="' + item.url + '" style="padding: 2px 6px; font-size: 11px;" title="复制 Markdown">${SUPPORTED_LANG[lang].copy || "复制"}</button>',
-                        '<button class="opt-button" data-action="delete" data-filename="' + item.filename + '" style="padding: 2px 6px; font-size: 11px; color: #cf222e;" title="删除图片">${SUPPORTED_LANG[lang].delete || "删除"}</button>',
+                        '<button class="opt-button" data-action="insert" data-url="' + item.url + '" style="flex: 1; min-width: 0; padding: 2px 2px; font-size: 11px; text-align: center; justify-content: center; box-sizing: border-box;">${SUPPORTED_LANG[lang].insertImg || "插入"}</button>',
+                        '<button class="opt-button" data-action="copy" data-url="' + item.url + '" style="flex: 1; min-width: 0; padding: 2px 2px; font-size: 11px; text-align: center; justify-content: center; box-sizing: border-box;" title="复制 Markdown">${SUPPORTED_LANG[lang].copy || "复制"}</button>',
+                        '<button class="opt-button" data-action="delete" data-filename="' + item.filename + '" style="flex: 1; min-width: 0; padding: 2px 2px; font-size: 11px; color: #cf222e; text-align: center; justify-content: center; box-sizing: border-box;" title="删除图片">${SUPPORTED_LANG[lang].delete || "删除"}</button>',
                       '</div>',
                     '</div>',
                   '</div>'
