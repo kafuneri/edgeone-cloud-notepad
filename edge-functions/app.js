@@ -1,4 +1,4 @@
-  let SALT, SECRET, LIST_SECRET;
+  let SALT, SECRET, LIST_SECRET, KV;
 import { getStore } from "@edgeone/pages-blob";
 const store = getStore("notepad");
   // 新增：用于记录错误次数的内存黑名单
@@ -934,6 +934,56 @@ const store = getStore("notepad");
     };
   }
 
+  // KV helpers with fallback to Blob
+  async function kvGet(key, type = "text") {
+    if (KV) {
+      try {
+        const res = await KV.get(key, type);
+        if (res !== null && res !== undefined) {
+          if (type === "json" && typeof res === "string") {
+            try { return JSON.parse(res); } catch (e) { return res; }
+          }
+          return res;
+        }
+      } catch (e) {
+        console.warn("KV.get failed, falling back to Blob:", e.message);
+      }
+    }
+    try {
+      return await store.get(key, { type, consistency: "strong" });
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function kvPut(key, value) {
+    if (KV) {
+      try {
+        const valStr = typeof value === "object" ? JSON.stringify(value) : String(value);
+        return await KV.put(key, valStr);
+      } catch (e) {
+        console.warn("KV.put failed, falling back to Blob:", e.message);
+      }
+    }
+    if (typeof value === "object") {
+      return await store.setJSON(key, value);
+    }
+    return await store.set(key, value);
+  }
+
+  async function kvDelete(key) {
+    if (KV) {
+      try {
+        await KV.delete(key);
+      } catch (e) {
+        console.warn("KV.delete failed:", e.message);
+      }
+    }
+    try {
+      await store.delete(key);
+    } catch (e) {}
+  }
+
   async function putNote(key, value, metadata) {
     await store.setJSON(`notes/${key}`, {
       value: value || "",
@@ -1047,7 +1097,7 @@ const store = getStore("notepad");
   router.get("/share/:md5", async (request) => {
     const lang = getI18n(request);
     const { md5 } = request.params;
-    const path = await store.get(`share/${md5}`, { consistency: "strong" });
+    const path = await kvGet(`share/${md5}`);
     if (!!path) {
       const { value, metadata } = await queryNote(path);
       return returnPage("Share", {
@@ -1089,14 +1139,14 @@ const store = getStore("notepad");
     const lang = getI18n(request);
     const ip = request.headers.get("eo-client-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || request.headers.get("cf-connecting-ip") || "unknown_ip";
     
-    // 细粒度隔离：绑定 IP 与当前笔记路径，避免误伤同 IP 下的其他笔记
+    // 细粒度隔离：绑定 IP 与当前笔记路径，存入 KV（兼备 Blob 容灾）
     const failsKey = `fails/${encodeURIComponent(ip)}_${encodeURIComponent(path)}`;
     const now = Date.now();
 
-    // 1. 读取当前失败记录与冷却时间
+    // 1. 读取当前失败记录与冷却时间（优先读取 KV 缓存）
     let failRecord = null;
     try {
-      failRecord = await store.get(failsKey, { type: "json", consistency: "strong" });
+      failRecord = await kvGet(failsKey, "json");
     } catch (e) {}
 
     let fails = 0;
@@ -1136,7 +1186,7 @@ const store = getStore("notepad");
     // 4. 密码正确：立即重置计数，颁发 Token
     if (isPasswordCorrect) {
       try {
-        await store.delete(failsKey);
+        await kvDelete(failsKey);
       } catch (e) {}
       
       const token = await import_cloudflare_worker_jwt2.default.sign({ path }, SECRET);
@@ -1162,7 +1212,7 @@ const store = getStore("notepad");
     const recordExpireAt = now + 1800 * 1000;
 
     try {
-      await store.setJSON(failsKey, {
+      await kvPut(failsKey, {
         count: fails,
         unlockAt: newUnlockAt,
         expireAt: recordExpireAt
@@ -1226,11 +1276,11 @@ const store = getStore("notepad");
           });
           const md5 = await MD5(path);
           if (share) {
-            await store.set(`share/${md5}`, path);
+            await kvPut(`share/${md5}`, path);
             return returnJSON(0, md5);
           }
           if (share === false) {
-            await store.delete(`share/${md5}`);
+            await kvDelete(`share/${md5}`);
           }
           return returnJSON(0);
         } catch (error) {
@@ -1272,6 +1322,7 @@ const store = getStore("notepad");
     SALT = env?.SCN_SALT || process.env?.SCN_SALT || "";
     SECRET = env?.SCN_SECRET || process.env?.SCN_SECRET || "";
     LIST_SECRET = env?.LIST_SECRET || process.env?.LIST_SECRET || "";
+    KV = env?.notepad_kv || globalThis?.notepad_kv || null;
 
     try {
       return await router.handle(request);
