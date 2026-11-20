@@ -635,7 +635,7 @@ const store = getStore("notepad");
             <div class="opt">
                 <button class="opt-button opt-pw">${pw ? SUPPORTED_LANG[lang].changePW : SUPPORTED_LANG[lang].setPW}</button>
                 ${SWITCHER("Markdown", mode === "md", "opt-mode")}
-                ${mode === "md" ? `<button id="md-toggle-btn" class="opt-button" style="margin-left:8px;" title="${SUPPORTED_LANG[lang].tipDblClick}">✏️ ${SUPPORTED_LANG[lang].edit}</button>` : ""}
+                ${mode === "md" ? `<button id="md-toggle-btn" class="opt-button" style="margin-left:8px;" title="${SUPPORTED_LANG[lang].tipDblClick}">${SUPPORTED_LANG[lang].edit}</button>` : ""}
                 ${SWITCHER(SUPPORTED_LANG[lang].share, share, "opt-share")}
             </div>
             ` : ""}
@@ -811,7 +811,7 @@ const store = getStore("notepad");
             contents.style.display = "block";
             if (preview) preview.style.display = "none";
             if (toggleBtn) {
-              toggleBtn.innerHTML = "👁️ " + langTexts.preview;
+              toggleBtn.innerHTML = langTexts.preview;
               toggleBtn.title = "";
             }
             contents.focus();
@@ -825,7 +825,7 @@ const store = getStore("notepad");
               }
             }
             if (toggleBtn) {
-              toggleBtn.innerHTML = "✏️ " + langTexts.edit;
+              toggleBtn.innerHTML = langTexts.edit;
               toggleBtn.title = langTexts.tip;
             }
           }
