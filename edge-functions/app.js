@@ -1839,7 +1839,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 const n = notes[i];
                 if (exportZipText) exportZipText.textContent = "${SUPPORTED_LANG[lang].exportingProgress || '打包中'} (" + (i + 1) + "/" + notes.length + ")...";
                 try {
-                  const cleanPath = n.path.replace(/^\/+/, "");
+                  const cleanPath = n.path.replace(new RegExp('^/+', 'g'), '');
                   const rawResp = await fetch("/raw/" + encodeURI(cleanPath));
                   if (rawResp.ok) {
                     const rawText = await rawResp.text();
@@ -2749,7 +2749,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           if (items.length === 0) {
             const raw = getRawMarkdown(overrideText);
             if (raw) {
-              const lines = raw.split("\n");
+              const lines = raw.split(String.fromCharCode(10));
               let inCode = false;
               for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
@@ -2758,7 +2758,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                   continue;
                 }
                 if (inCode) continue;
-                const match = line.match(/^(#{1,6})\s+(.+)$/);
+                const match = line.match(new RegExp('^(#{1,6})\\s+(.+)$'));
                 if (match) {
                   const cleanText = match[2].trim().replace(/[*_~]/g, "").replace(new RegExp(String.fromCharCode(96), "g"), "");
                   items.push({
@@ -2818,7 +2818,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
               // Jump in textarea
               if (contents && item.lineIndex !== undefined) {
-                const lines = contents.value.split("\n");
+                const lines = contents.value.split(String.fromCharCode(10));
                 let offset = 0;
                 for (let j = 0; j < item.lineIndex; j++) {
                   offset += lines[j].length + 1;
