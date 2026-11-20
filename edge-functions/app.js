@@ -1229,9 +1229,13 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         margin: 0 !important;
         width: 90% !important;
         max-width: 680px !important;
+        height: auto !important;
+        min-height: 320px !important;
         max-height: 85vh !important;
         display: flex !important;
         flex-direction: column !important;
+        justify-content: flex-start !important;
+        align-items: stretch !important;
         padding: 20px 24px !important;
         box-sizing: border-box !important;
         background: #ffffff !important;
