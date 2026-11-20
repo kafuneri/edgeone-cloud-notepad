@@ -618,6 +618,14 @@ const store = new Proxy({}, {
       changePW: "Change Password",
       share: "Share",
       uploadImg: "Image",
+      imgMgr: "Images",
+      imgMgrTitle: "Image Manager",
+      uploadNewImg: "+ Upload Image",
+      insertImg: "Insert",
+      deleteImgConfirm: "Permanently delete image? This will reclaim storage quota.",
+      copiedImgMd: "Copied Markdown link!",
+      insertedImg: "Image inserted into note!",
+      noImages: "No images uploaded yet",
       uploading: "Compressing and uploading image...",
       uploadSuccess: "Image uploaded successfully!",
       uploadFail: "Image upload failed",
@@ -650,6 +658,14 @@ const store = new Proxy({}, {
       changePW: "修改密码",
       share: "分享",
       uploadImg: "图片",
+      imgMgr: "图片",
+      imgMgrTitle: "图片管理",
+      uploadNewImg: "+ 上传图片",
+      insertImg: "插入",
+      deleteImgConfirm: "确定永久删除此图片？将立即释放存储配额。",
+      copiedImgMd: "已复制 Markdown 链接！",
+      insertedImg: "已插入图片到笔记！",
+      noImages: "暂无图片，可在编辑区粘贴截图或点击右上角上传",
       uploading: "正在压缩并上传图片...",
       uploadSuccess: "图片上传成功！",
       uploadFail: "图片上传失败",
@@ -693,9 +709,8 @@ const store = new Proxy({}, {
                 ${!isPrivateMode ? `<button class="opt-button opt-pw">${pw ? SUPPORTED_LANG[lang].changePW : SUPPORTED_LANG[lang].setPW}</button>` : ""}
                 ${SWITCHER("Markdown", mode === "md", "opt-mode")}
                 <button class="opt-button opt-share-trigger" style="margin-left:6px;">${SUPPORTED_LANG[lang].share}</button>
-                <button id="opt-img-btn" class="opt-button" style="margin-left:6px;" title="${SUPPORTED_LANG[lang].uploadImg} (200MB)">${SUPPORTED_LANG[lang].uploadImg}</button>
-                <button id="opt-del-btn" class="opt-button" style="margin-left:6px;color:#cf222e;" title="${SUPPORTED_LANG[lang].delete}">${SUPPORTED_LANG[lang].delete}</button>
-                <input type="file" id="img-upload-input" accept="image/*" style="display:none;" />
+                <button id="opt-img-btn" class="opt-button" style="margin-left:6px;" title="${SUPPORTED_LANG[lang].imgMgrTitle} (200MB)">${SUPPORTED_LANG[lang].imgMgr}</button>
+                <input type="file" id="img-upload-input" accept="image/*" multiple style="display:none;" />
             </div>
             ` : ""}
         <a class="github-link" title="Github" target="_blank" href="https://github.com/kafuneri/edgeone-cloud-notepad" rel="noreferrer">
@@ -737,6 +752,40 @@ var MODAL = (lang, ext = {}) => `
           </div>
         </div>
     </div>
+</div>
+`;
+var IMAGE_MODAL = (lang) => `
+<div class="modal image-modal" id="image-mgr-modal" style="display:none; position:fixed; inset:0; z-index:1000; align-items:center; justify-content:center;">
+    <div class="modal-mask" id="image-mgr-mask" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(2px);"></div>
+    <div class="modal-content" style="position:relative; z-index:1001; max-width:680px; width:92vw; max-height:85vh; padding:20px 24px; box-sizing:border-box; border-radius:12px; display:flex; flex-direction:column; overflow:hidden; background:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e1e4e8; padding-bottom:12px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <h3 style="margin:0; font-size:16px; color:#1f2328; font-weight:600;">🖼️ ${SUPPORTED_LANG[lang].imgMgrTitle || "图片管理"}</h3>
+                <span id="img-mgr-quota-badge" style="font-size:11px; padding:2px 8px; border-radius:10px; background:#f0f6fc; color:#0969da; border:1px solid #d0d7de;">0.00MB / 200MB</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button id="img-mgr-upload-btn" class="opt-button" style="background:#2da44e; color:#fff; border-color:#2da44e; padding:4px 12px; font-size:12px; font-weight:500; cursor:pointer;">${SUPPORTED_LANG[lang].uploadNewImg || "+ 上传图片"}</button>
+                <span class="close-btn" id="image-mgr-close" style="cursor:pointer; font-size:18px; color:#57606a; padding:2px 6px;">✕</span>
+            </div>
+        </div>
+        <div id="img-mgr-progress-wrap" style="height:3px; background:#eaecef; border-radius:2px; margin-bottom:10px; overflow:hidden; display:none;">
+            <div id="img-mgr-progress-bar" style="height:100%; width:0%; background:#2da44e; transition:width 0.3s ease;"></div>
+        </div>
+        <div id="img-mgr-grid" style="flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:12px; padding:4px 2px; min-height:180px; max-height:55vh;">
+            <!-- Rendered by JS -->
+        </div>
+        <div id="img-mgr-empty" style="display:none; flex-direction:column; align-items:center; justify-content:center; padding:50px 0; color:#8c959f; font-size:13px;">
+            <div style="font-size:36px; margin-bottom:8px;">🖼️</div>
+            <div>${SUPPORTED_LANG[lang].noImages || "暂无上传的图片"}</div>
+            <div style="font-size:12px; color:#afb8c1; margin-top:4px;">可在编辑区直接粘贴截屏 (Ctrl+V) 或点击右上角上传</div>
+        </div>
+    </div>
+</div>
+`;
+var LIGHTBOX = () => `
+<div id="img-lightbox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:99999; align-items:center; justify-content:center; cursor:zoom-out; backdrop-filter:blur(4px); transition:opacity 0.2s ease;">
+    <img id="lightbox-img" src="" style="max-width:92vw; max-height:92vh; object-fit:contain; border-radius:6px; box-shadow:0 8px 32px rgba(0,0,0,0.6);" />
+    <span style="position:fixed; top:20px; right:25px; color:#fff; font-size:26px; cursor:pointer; opacity:0.8; user-select:none;">✕</span>
 </div>
 `;
 var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPrivateMode }) => {
@@ -827,9 +876,42 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       #preview-md table tr:nth-child(2n) {
         background-color: #fcfdfe;
       }
-      #preview-md img {
-        max-width: 100%;
-        border-radius: 4px;
+      /* Automatic image width & height constraints to prevent screen overflow */
+      .vditor-reset img,
+      .vditor-ir img,
+      .vditor-wysiwyg img,
+      .vditor-sv img,
+      .vditor-preview img,
+      #preview-md img,
+      .vditor img,
+      .contents img {
+        max-width: min(100%, 680px) !important;
+        max-height: 520px !important;
+        width: auto !important;
+        height: auto !important;
+        object-fit: contain !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
+        margin: 16px auto !important;
+        display: block !important;
+        cursor: zoom-in;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .vditor-reset img:hover,
+      .vditor-ir img:hover,
+      .vditor-wysiwyg img:hover,
+      .vditor-preview img:hover,
+      #preview-md img:hover,
+      .contents img:hover {
+        transform: scale(1.008);
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12) !important;
+      }
+      .img-card {
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+      .img-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       }
       #preview-md hr {
         height: 2px;
@@ -1160,7 +1242,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       <div class="sidebar-footer">
         <div style="display:flex; flex-direction:column; gap:2px; text-align:left;">
           <span>${isPrivateMode ? SUPPORTED_LANG[lang].privateVault : SUPPORTED_LANG[lang].publicVault}</span>
-          <span id="sidebar-img-quota" style="font-size:11px; color:#8c959f;">配额: 200MB</span>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span id="sidebar-img-quota" style="font-size:11px; color:#8c959f;">配额: 200MB</span>
+            <a href="javascript:void(0)" id="sidebar-open-img-mgr" style="font-size:11px; color:#0969da; text-decoration:none; cursor:pointer;">[管理]</a>
+          </div>
         </div>
         ${isPrivateMode ? `<button id="sidebar-logout-btn" class="sidebar-logout-btn">${SUPPORTED_LANG[lang].logout}</button>` : ""}
       </div>
@@ -1183,6 +1268,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     </div>
     <div id="loading"></div>
     ${MODAL(lang, ext)}
+    ${IMAGE_MODAL(lang)}
+    ${LIGHTBOX()}
     ${FOOTER({ ...ext, isEdit, lang, isPrivateMode, path: title })}
     ${isEdit && isMdMode ? `<script src="//gcore.jsdelivr.net/npm/vditor@3.10.8/dist/index.min.js"><\/script>` : ""}
     ${!isEdit && isMdMode || ext.share ? `<script src="${CDN_PREFIX}/js/purify.min.js"><\/script>` : ""}
@@ -1611,6 +1698,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             if (result.err === 0 && result.data && result.data.url) {
               insertImageMarkdown(result.data.url);
               toast.done("${SUPPORTED_LANG[lang].uploadSuccess} (" + (result.data.size / 1024).toFixed(0) + " KB)");
+              if (imgModal && imgModal.style.display !== "none") {
+                loadImageManagerList();
+              }
             } else {
               toast.done(result.msg || "${SUPPORTED_LANG[lang].uploadFail}", true);
             }
@@ -1622,14 +1712,161 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
         window.processAndUploadImage = processAndUpload;
 
-        if (imgBtn && fileInput) {
-          imgBtn.onclick = function() { fileInput.click(); };
-          fileInput.onchange = function() {
+        // --- Image Manager Logic ---
+        const imgModal = document.getElementById("image-mgr-modal");
+        const imgCloseBtn = document.getElementById("image-mgr-close");
+        const imgMask = document.getElementById("image-mgr-mask");
+        const imgUploadBtn = document.getElementById("img-mgr-upload-btn");
+        const sidebarOpenImgMgr = document.getElementById("sidebar-open-img-mgr");
+
+        async function loadImageManagerList() {
+          const grid = document.getElementById("img-mgr-grid");
+          const empty = document.getElementById("img-mgr-empty");
+          const badge = document.getElementById("img-mgr-quota-badge");
+          if (!grid) return;
+          grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:#8c959f;">加载中...</div>';
+          if (empty) empty.style.display = "none";
+          try {
+            const resp = await fetch("/api/images");
+            const res = await resp.json();
+            if (res.err === 0 && res.data) {
+              const list = res.data.images || [];
+              const quota = res.data.quota || {};
+              if (badge) {
+                badge.textContent = (quota.usedMB || "0.00") + "MB / 200MB (" + (quota.percent || "0%") + ")";
+              }
+              const sidebarQuota = document.getElementById("sidebar-img-quota");
+              if (sidebarQuota && quota.usedMB) {
+                sidebarQuota.textContent = "图片: " + quota.usedMB + "MB / 200MB";
+              }
+              if (list.length === 0) {
+                grid.innerHTML = "";
+                if (empty) empty.style.display = "flex";
+                return;
+              }
+              if (empty) empty.style.display = "none";
+              grid.innerHTML = list.map(function(item) {
+                const safeName = item.filename.replace(/[^a-zA-Z0-9]/g, '_');
+                const sizeStr = item.size ? (item.size / 1024).toFixed(0) + " KB" : "";
+                return '<div class="img-card" id="img-card-' + safeName + '" style="border: 1px solid #e1e4e8; border-radius: 8px; overflow: hidden; background: #f6f8fa; display: flex; flex-direction: column;">' +
+                  '<div style="width: 100%; height: 110px; background-image: repeating-conic-gradient(#f0f0f0 0% 25%, #fff 0% 50%) 50% / 16px 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden;" title="点击插入到笔记" onclick="window.insertImageToNote(\'' + item.url + '\')">' +
+                    '<img src="' + item.url + '" style="max-width: 100%; max-height: 100%; object-fit: contain;" loading="lazy" />' +
+                  '</div>' +
+                  '<div style="padding: 6px 8px; background: #fff; border-top: 1px solid #e1e4e8; display: flex; flex-direction: column; gap: 4px;">' +
+                    '<div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #57606a;">' +
+                      '<span style="font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70px;" title="' + item.filename + '">' + item.filename + '</span>' +
+                      '<span>' + sizeStr + '</span>' +
+                    </div>' +
+                    '<div style="display: flex; gap: 4px; margin-top: 2px;">' +
+                      '<button class="opt-button" style="flex: 1; padding: 2px 4px; font-size: 11px;" onclick="window.insertImageToNote(\'' + item.url + '\')">${SUPPORTED_LANG[lang].insertImg || "插入"}</button>' +
+                      '<button class="opt-button" style="padding: 2px 6px; font-size: 11px;" title="复制 Markdown" onclick="window.copyImageMd(\'' + item.url + '\')">📋</button>' +
+                      '<button class="opt-button" style="padding: 2px 6px; font-size: 11px; color: #cf222e;" title="删除图片" onclick="window.deleteManagedImage(\'' + item.filename + '\')">🗑️</button>' +
+                    </div>' +
+                  '</div>' +
+                '</div>';
+              }).join("");
+            } else {
+              grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#cf222e;padding:20px;">加载失败: ' + (res.msg || "未知错误") + '</div>';
+            }
+          } catch (e) {
+            grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#cf222e;padding:20px;">网络异常: ' + e.message + '</div>';
+          }
+        }
+
+        window.openImageManager = function() {
+          if (imgModal) {
+            imgModal.style.display = "flex";
+            loadImageManagerList();
+          }
+        };
+
+        window.closeImageManager = function() {
+          if (imgModal) {
+            imgModal.style.display = "none";
+          }
+        };
+
+        window.insertImageToNote = function(url) {
+          insertImageMarkdown(url);
+          window.closeImageManager();
+          const toast = showUploadToast("${SUPPORTED_LANG[lang].insertedImg || '已插入图片到笔记！'}");
+          toast.done("${SUPPORTED_LANG[lang].insertedImg || '已插入图片到笔记！'}");
+        };
+
+        window.copyImageMd = function(url) {
+          const md = "![](" + url + ")";
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(md).then(function() {
+              const toast = showUploadToast("${SUPPORTED_LANG[lang].copiedImgMd || '已复制 Markdown 链接！'}");
+              toast.done("${SUPPORTED_LANG[lang].copiedImgMd || '已复制 Markdown 链接！'}");
+            });
+          } else {
+            prompt("复制下方 Markdown 图片链接：", md);
+          }
+        };
+
+        window.deleteManagedImage = async function(filename) {
+          if (!confirm("${SUPPORTED_LANG[lang].deleteImgConfirm || '确定永久删除此图片？将立即释放存储配额。'}")) return;
+          try {
+            const resp = await fetch("/api/images/" + filename + "/delete", { method: "POST" });
+            const res = await resp.json();
+            if (res.err === 0) {
+              const toast = showUploadToast("图片已删除");
+              toast.done("图片已删除");
+              loadImageManagerList();
+            } else {
+              alert("删除失败: " + (res.msg || "未知错误"));
+            }
+          } catch (e) {
+            alert("删除异常: " + e.message);
+          }
+        };
+
+        if (imgBtn) {
+          imgBtn.onclick = function() { window.openImageManager(); };
+        }
+        if (sidebarOpenImgMgr) {
+          sidebarOpenImgMgr.onclick = function() { window.openImageManager(); };
+        }
+        if (imgCloseBtn) {
+          imgCloseBtn.onclick = function() { window.closeImageManager(); };
+        }
+        if (imgMask) {
+          imgMask.onclick = function() { window.closeImageManager(); };
+        }
+        if (imgUploadBtn && fileInput) {
+          imgUploadBtn.onclick = function() { fileInput.click(); };
+        }
+        if (fileInput) {
+          fileInput.onchange = async function() {
             if (this.files && this.files.length) {
-              processAndUpload(this.files[0]);
+              for (let i = 0; i < this.files.length; i++) {
+                await processAndUpload(this.files[i]);
+              }
               this.value = "";
+              if (imgModal && imgModal.style.display !== "none") {
+                loadImageManagerList();
+              }
             }
           };
+        }
+
+        // Lightbox for any image click in note
+        document.addEventListener("click", function(e) {
+          if (e.target && e.target.tagName === "IMG") {
+            if (e.target.closest(".vditor-reset") || e.target.closest("#preview-md") || e.target.closest("#vditor") || e.target.closest(".contents")) {
+              const lb = document.getElementById("img-lightbox");
+              const lbImg = document.getElementById("lightbox-img");
+              if (lb && lbImg) {
+                lbImg.src = e.target.src;
+                lb.style.display = "flex";
+              }
+            }
+          }
+        });
+        const lb = document.getElementById("img-lightbox");
+        if (lb) {
+          lb.onclick = function() { lb.style.display = "none"; };
         }
 
         // Paste event on textarea (Plain Text mode)
@@ -2781,6 +3018,23 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         await kvPut("stat/images_usage_bytes", String(currentUsage));
       }
 
+      // Maintain stat/images_list in KV
+      try {
+        let list = [];
+        const listStr = await kvGet("stat/images_list");
+        if (listStr) list = JSON.parse(listStr);
+        list = list.filter(item => item.filename !== filename);
+        list.unshift({
+          filename,
+          url: `/api/images/${filename}`,
+          size: fileBuffer.byteLength,
+          uploadedAt: Date.now()
+        });
+        await kvPut("stat/images_list", JSON.stringify(list));
+      } catch (e) {
+        console.error("Failed to update stat/images_list:", e);
+      }
+
       return returnJSON(0, {
         url: `/api/images/${filename}`,
         filename,
@@ -2827,6 +3081,75 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
   }
 
+  async function handleImageList(request) {
+    if (ADMIN_PASSWORD) {
+      const isAdmin = await checkAdminAuth(request);
+      if (!isAdmin) {
+        return returnJSON(401, "Unauthorized");
+      }
+    }
+    try {
+      let list = [];
+      const listStr = await kvGet("stat/images_list");
+      if (listStr) {
+        try {
+          list = JSON.parse(listStr);
+        } catch (e) {}
+      }
+
+      // Query blobs to ensure complete synchronization with blob storage
+      const { blobs } = await store.list({ prefix: "images/", consistency: "strong" });
+      const blobMap = new Map();
+      (blobs || []).forEach(b => {
+        const fname = b.key.slice("images/".length);
+        if (fname) blobMap.set(fname, b);
+      });
+
+      // Filter out deleted blobs from list
+      list = list.filter(item => blobMap.has(item.filename));
+
+      // Add any blob present in store but missing in list
+      const existingFnames = new Set(list.map(i => i.filename));
+      for (const [fname, b] of blobMap.entries()) {
+        if (!existingFnames.has(fname)) {
+          let size = 0;
+          try {
+            const buf = await store.get(b.key, { type: "arrayBuffer", consistency: "strong" });
+            if (buf) size = buf.byteLength;
+          } catch(e) {}
+          list.push({
+            filename: fname,
+            url: `/api/images/${fname}`,
+            size,
+            uploadedAt: Date.now()
+          });
+        }
+      }
+
+      list.sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
+      await kvPut("stat/images_list", JSON.stringify(list));
+
+      const MAX_QUOTA = 200 * 1024 * 1024;
+      const usageStr = await kvGet("stat/images_usage_bytes");
+      let currentUsage = parseInt(usageStr || "0", 10);
+      if (isNaN(currentUsage) || currentUsage < 0) currentUsage = 0;
+
+      return returnJSON(0, {
+        images: list,
+        quota: {
+          usedBytes: currentUsage,
+          maxBytes: MAX_QUOTA,
+          usedMB: (currentUsage / (1024 * 1024)).toFixed(2),
+          maxMB: 200,
+          percent: ((currentUsage / MAX_QUOTA) * 100).toFixed(1) + "%"
+        }
+      });
+    } catch (err) {
+      console.error("handleImageList error:", err);
+      return returnJSON(500, "Failed to list images: " + err.message);
+    }
+  }
+
   async function handleQuota(request) {
     const MAX_QUOTA = 200 * 1024 * 1024;
     const usageStr = await kvGet("stat/images_usage_bytes");
@@ -2860,6 +3183,18 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         const usageStr = await kvGet("stat/images_usage_bytes");
         let currentUsage = Math.max(0, parseInt(usageStr || "0", 10) - size);
         await kvPut("stat/images_usage_bytes", String(currentUsage));
+
+        // Remove from stat/images_list
+        try {
+          let list = [];
+          const listStr = await kvGet("stat/images_list");
+          if (listStr) {
+            list = JSON.parse(listStr);
+            list = list.filter(item => item.filename !== filename);
+            await kvPut("stat/images_list", JSON.stringify(list));
+          }
+        } catch (e) {}
+
         return returnJSON(0, { freedBytes: size, remainingMB: (currentUsage / (1024 * 1024)).toFixed(2) });
       }
       return returnJSON(404, "Image not found");
@@ -2894,6 +3229,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
     if (method === "POST" && pathname === "/api/upload") {
       return handleUpload(request);
+    }
+    if (method === "GET" && pathname === "/api/images") {
+      return handleImageList(request);
     }
     if (pathname.startsWith("/api/images/")) {
       const rest = pathname.slice(12);
