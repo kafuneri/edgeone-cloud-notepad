@@ -775,13 +775,16 @@ const store = new Proxy({}, {
                 ${!isPrivateMode ? `<button class="opt-button opt-pw">${pw ? SUPPORTED_LANG[lang].changePW : SUPPORTED_LANG[lang].setPW}</button>` : ""}
                 ${SWITCHER("Markdown", mode === "md", "opt-mode")}
                 <button class="opt-button opt-share-trigger" style="margin-left:6px;">${SUPPORTED_LANG[lang].share}</button>
+                ${isPrivateMode ? `
                 <button id="opt-img-btn" class="opt-button" style="margin-left:6px;" title="${SUPPORTED_LANG[lang].imgMgrTitle} (200MB)">${SUPPORTED_LANG[lang].imgMgr}</button>
                 <button id="opt-hist-btn" class="opt-button" style="margin-left:6px;" title="${SUPPORTED_LANG[lang].historyTitle}">${SUPPORTED_LANG[lang].history}</button>
-                <a href="${path ? ('/raw/' + encodeURI(path)) : '#'}" target="_blank" class="opt-button" style="text-decoration:none; margin-left:6px; display:inline-flex; align-items:center;" title="${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}">${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}</a>
                 <input type="file" id="img-upload-input" accept="image/*" multiple style="display:none;" />
+                ` : ""}
+                <a href="${path ? ('/raw/' + encodeURI(path)) : '#'}" target="_blank" class="opt-button" style="text-decoration:none; margin-left:6px; display:inline-flex; align-items:center;" title="${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}">${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}</a>
             </div>
             ` : ""}
         <div style="display:flex; align-items:center; gap:12px; margin-left:auto;">
+            ${!isEdit && path ? `<a href="/raw/${encodeURI(path)}" target="_blank" class="opt-button" style="text-decoration:none; font-size:12px; padding:2px 8px; display:inline-flex; align-items:center;" title="${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}">${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}</a>` : ""}
             <span id="status-word-count" style="font-size:12px; color:#57606a; white-space:nowrap; user-select:none;">${SUPPORTED_LANG[lang].wordsCount}: 0 · ${SUPPORTED_LANG[lang].charsCount}: 0 · 0 ${SUPPORTED_LANG[lang].linesCount}</span>
             <a class="github-link" title="Github" target="_blank" href="https://github.com/kafuneri/edgeone-cloud-notepad" rel="noreferrer">
                 <svg viewBox="64 64 896 896" focusable="false" data-icon="github" width="1em" height="1em" fill="currentColor" aria-hidden="true"><path d="M511.6 76.3C264.3 76.2 64 276.4 64 523.5 64 718.9 189.3 885 363.8 946c23.5 5.9 19.9-10.8 19.9-22.2v-77.5c-135.7 15.9-141.2-73.9-150.3-88.9C215 726 171.5 718 184.5 703c30.9-15.9 62.4 4 98.9 57.9 26.4 39.1 77.9 32.5 104 26 5.7-23.5 17.9-44.5 34.7-60.8-140.6-25.2-199.2-111-199.2-213 0-49.5 16.3-95 48.3-131.7-20.4-60.5 1.9-112.3 4.9-120 58.1-5.2 118.5 41.6 123.2 45.3 33-8.9 70.7-13.6 112.9-13.6 42.4 0 80.2 4.9 113.5 13.9 11.3-8.6 67.3-48.8 121.3-43.9 2.9 7.7 24.7 58.3 5.5 118 32.4 36.8 48.9 82.7 48.9 132.3 0 102.2-59 188.1-200 212.9a127.5 127.5 0 0138.1 91v112.5c.8 9 0 17.9 15 17.9 177.1-59.7 304.6-227 304.6-424.1 0-247.2-200.4-447.3-447.5-447.3z"></path></svg>
@@ -944,7 +947,7 @@ var TOC_PANEL = (lang) => `
     </div>
 </div>
 `;
-var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPrivateMode }) => {
+var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPrivateMode = false }) => {
     const isMdMode = ext.mode === "md";
     return `
 <!DOCTYPE html>
@@ -1529,6 +1532,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     </style>
 </head>
 <body>
+    ${isPrivateMode ? `
     <!-- Top-left Sidebar Toggle Button -->
     <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="菜单"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:auto;"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
     <div id="sidebar-overlay" class="sidebar-overlay"></div>
@@ -1567,6 +1571,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         ${isPrivateMode ? `<button id="sidebar-logout-btn" class="sidebar-logout-btn">${SUPPORTED_LANG[lang].logout}</button>` : ""}
       </div>
     </div>
+    ` : ""}
 
     <div class="note-container">
         <div id="draft-alert" style="display:none; width:100%; max-width:960px; margin:0 auto 12px auto; padding:8px 16px; background:#fff8c5; border:1px solid #d4a72c; border-radius:6px; font-size:13px; color:#573a08; align-items:center; justify-content:space-between; box-shadow:0 1px 4px rgba(0,0,0,0.06); box-sizing:border-box;">
@@ -1592,8 +1597,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     </div>
     <div id="loading"></div>
     ${MODAL(lang, ext)}
-    ${IMAGE_MODAL(lang)}
-    ${HISTORY_MODAL(lang)}
+    ${isPrivateMode ? IMAGE_MODAL(lang) : ""}
+    ${isPrivateMode ? HISTORY_MODAL(lang) : ""}
     ${LIGHTBOX()}
     ${TOC_PANEL(lang)}
     ${FOOTER({ ...ext, isEdit, lang, isPrivateMode, path: title })}
@@ -2020,7 +2025,29 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       })();
     </script>
 
-    ${isEdit ? `
+    <!-- Lightbox for image clicks in note -->
+    <script>
+      (function() {
+        document.addEventListener("click", function(e) {
+          if (e.target && e.target.tagName === "IMG") {
+            if (e.target.closest(".vditor-reset") || e.target.closest("#preview-md") || e.target.closest("#vditor") || e.target.closest(".contents")) {
+              const lb = document.getElementById("img-lightbox");
+              const lbImg = document.getElementById("lightbox-img");
+              if (lb && lbImg) {
+                lbImg.src = e.target.src;
+                lb.style.display = "flex";
+              }
+            }
+          }
+        });
+        const lb = document.getElementById("img-lightbox");
+        if (lb) {
+          lb.onclick = function() { lb.style.display = "none"; };
+        }
+      })();
+    </script>
+
+    ${isEdit && isPrivateMode ? `
     <script>
       (function() {
         const contents = document.querySelector("#contents");
@@ -2317,24 +2344,6 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           };
         }
 
-        // Lightbox for any image click in note
-        document.addEventListener("click", function(e) {
-          if (e.target && e.target.tagName === "IMG") {
-            if (e.target.closest(".vditor-reset") || e.target.closest("#preview-md") || e.target.closest("#vditor") || e.target.closest(".contents")) {
-              const lb = document.getElementById("img-lightbox");
-              const lbImg = document.getElementById("lightbox-img");
-              if (lb && lbImg) {
-                lbImg.src = e.target.src;
-                lb.style.display = "flex";
-              }
-            }
-          }
-        });
-        const lb = document.getElementById("img-lightbox");
-        if (lb) {
-          lb.onclick = function() { lb.style.display = "none"; };
-        }
-
         // Paste event on textarea (Plain Text mode)
         if (contents) {
           contents.addEventListener("paste", function(e) {
@@ -2382,6 +2391,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             toolbarConfig: { hide: true },
             toolbar: [],
             cache: { enable: false },
+            ${isPrivateMode ? `
             upload: {
               accept: "image/*",
               multiple: false,
@@ -2391,6 +2401,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 }
               }
             },
+            ` : ""}
             value: contents.value || "",
             after() {
               if (typeof window.updateToc === "function") {
@@ -3380,6 +3391,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       if (!isAdmin) {
         return returnJSON(401, "Unauthorized");
       }
+    } else {
+      return returnJSON(403, "Directory listing is restricted to private vault mode.");
     }
 
     try {
@@ -3629,7 +3642,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       content: value,
       ext: metadata,
       tips,
-      isPrivateMode: !!ADMIN_PASSWORD
+      isPrivateMode: false
     });
   }
 
@@ -4031,8 +4044,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
 
     // History snapshot tracking:
-    // If note previously had content, and new content is different and non-empty
-    if (value && value !== content && value.trim().length > 0) {
+    // Only record snapshots in private mode to avoid consuming storage quota on public edits
+    if (ADMIN_PASSWORD && value && value !== content && value.trim().length > 0) {
       try {
         const histKey = `hist/${encodeURIComponent(path)}`;
         let histList = [];
@@ -4219,17 +4232,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         return returnJSON(401, "Unauthorized: Admin login required for uploads");
       }
     } else {
-      const notePath = request.headers.get("x-note-path") || "";
-      if (notePath) {
-        const { metadata } = await queryNote(decodeURIComponent(notePath));
-        if (metadata.pw) {
-          const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
-          const valid = await checkAuth(cookie, decodeURIComponent(notePath));
-          if (!valid) {
-            return returnJSON(403, "Password required to upload to this note");
-          }
-        }
-      }
+      return returnJSON(403, "Image upload is restricted to private admin mode.");
     }
 
     try {
@@ -4355,6 +4358,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       if (!isAdmin) {
         return returnJSON(401, "Unauthorized");
       }
+    } else {
+      return returnJSON(403, "Image management is restricted to private admin mode.");
     }
     try {
       let list = [];
@@ -4439,6 +4444,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       if (!isAdmin) {
         return returnJSON(401, "Unauthorized");
       }
+    } else {
+      return returnJSON(403, "Image deletion is restricted to private admin mode.");
     }
     if (!/^[a-zA-Z0-9_-]+\.(webp|png|jpe?g|gif)$/i.test(filename)) {
       return returnJSON(400, "Invalid image name");
@@ -4478,10 +4485,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       if (!isAdmin) return false;
       return true;
     }
-    const { metadata } = await queryNote(path);
-    if (!metadata.pw) return true;
-    const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
-    return await checkAuth(cookie, path);
+    return false;
   }
 
   async function handleHistoryList(request) {
