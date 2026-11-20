@@ -651,7 +651,20 @@ const store = new Proxy({}, {
       privateVault: "Private Vault",
       publicVault: "Public Mode",
       logout: "Logout",
-      noNotes: "No notes yet"
+      noNotes: "No notes yet",
+      history: "History",
+      historyTitle: "History Snapshots",
+      historyLimit: "Max 5 snapshots retained",
+      historyEmpty: "No snapshots yet. Changes will be recorded automatically.",
+      restoreToThis: "Restore to this version",
+      restoreConfirm: "Restore note to this snapshot? Current editor content will be overwritten.",
+      restoredMsg: "Restored to selected version and saved!",
+      draftDetected: "Unsaved local draft detected",
+      restoreDraft: "Restore",
+      discardDraft: "Discard",
+      wordsCount: "Words",
+      charsCount: "Chars",
+      linesCount: "lines"
     },
     "zh": {
       setPW: "设置密码",
@@ -691,7 +704,20 @@ const store = new Proxy({}, {
       privateVault: "私有笔记库",
       publicVault: "公共便签",
       logout: "退出登录",
-      noNotes: "暂无笔记"
+      noNotes: "暂无笔记",
+      history: "历史版本",
+      historyTitle: "历史版本快照",
+      historyLimit: "滚动保留 5 个版本",
+      historyEmpty: "当前笔记暂无历史快照，每次变动自动记录",
+      restoreToThis: "恢复到此版本",
+      restoreConfirm: "确定要将笔记恢复到此历史版本吗？当前编辑区内容将被替换。",
+      restoredMsg: "已恢复到所选历史版本并保存！",
+      draftDetected: "检测到本地未保存草稿",
+      restoreDraft: "恢复草稿",
+      discardDraft: "放弃",
+      wordsCount: "字数",
+      charsCount: "字符",
+      linesCount: "行"
     }
   };
 
@@ -710,13 +736,17 @@ const store = new Proxy({}, {
                 ${SWITCHER("Markdown", mode === "md", "opt-mode")}
                 <button class="opt-button opt-share-trigger" style="margin-left:6px;">${SUPPORTED_LANG[lang].share}</button>
                 <button id="opt-img-btn" class="opt-button" style="margin-left:6px;" title="${SUPPORTED_LANG[lang].imgMgrTitle} (200MB)">${SUPPORTED_LANG[lang].imgMgr}</button>
+                <button id="opt-hist-btn" class="opt-button" style="margin-left:6px;" title="${SUPPORTED_LANG[lang].historyTitle}">${SUPPORTED_LANG[lang].history}</button>
                 <input type="file" id="img-upload-input" accept="image/*" multiple style="display:none;" />
             </div>
             ` : ""}
-        <a class="github-link" title="Github" target="_blank" href="https://github.com/kafuneri/edgeone-cloud-notepad" rel="noreferrer">
-            <svg viewBox="64 64 896 896" focusable="false" data-icon="github" width="1em" height="1em" fill="currentColor" aria-hidden="true"><path d="M511.6 76.3C264.3 76.2 64 276.4 64 523.5 64 718.9 189.3 885 363.8 946c23.5 5.9 19.9-10.8 19.9-22.2v-77.5c-135.7 15.9-141.2-73.9-150.3-88.9C215 726 171.5 718 184.5 703c30.9-15.9 62.4 4 98.9 57.9 26.4 39.1 77.9 32.5 104 26 5.7-23.5 17.9-44.5 34.7-60.8-140.6-25.2-199.2-111-199.2-213 0-49.5 16.3-95 48.3-131.7-20.4-60.5 1.9-112.3 4.9-120 58.1-5.2 118.5 41.6 123.2 45.3 33-8.9 70.7-13.6 112.9-13.6 42.4 0 80.2 4.9 113.5 13.9 11.3-8.6 67.3-48.8 121.3-43.9 2.9 7.7 24.7 58.3 5.5 118 32.4 36.8 48.9 82.7 48.9 132.3 0 102.2-59 188.1-200 212.9a127.5 127.5 0 0138.1 91v112.5c.8 9 0 17.9 15 17.9 177.1-59.7 304.6-227 304.6-424.1 0-247.2-200.4-447.3-447.5-447.3z"></path></svg>
-        </a>
-        ${updateAt ? `<span class="last-modified">${SUPPORTED_LANG[lang].lastModified} ${import_dayjs.default.unix(updateAt).fromNow()}</span>` : ""}
+        <div style="display:flex; align-items:center; gap:12px; margin-left:auto;">
+            <span id="status-word-count" style="font-size:12px; color:#57606a; white-space:nowrap; user-select:none;">${SUPPORTED_LANG[lang].wordsCount}: 0 · ${SUPPORTED_LANG[lang].charsCount}: 0 · 0 ${SUPPORTED_LANG[lang].linesCount}</span>
+            <a class="github-link" title="Github" target="_blank" href="https://github.com/kafuneri/edgeone-cloud-notepad" rel="noreferrer">
+                <svg viewBox="64 64 896 896" focusable="false" data-icon="github" width="1em" height="1em" fill="currentColor" aria-hidden="true"><path d="M511.6 76.3C264.3 76.2 64 276.4 64 523.5 64 718.9 189.3 885 363.8 946c23.5 5.9 19.9-10.8 19.9-22.2v-77.5c-135.7 15.9-141.2-73.9-150.3-88.9C215 726 171.5 718 184.5 703c30.9-15.9 62.4 4 98.9 57.9 26.4 39.1 77.9 32.5 104 26 5.7-23.5 17.9-44.5 34.7-60.8-140.6-25.2-199.2-111-199.2-213 0-49.5 16.3-95 48.3-131.7-20.4-60.5 1.9-112.3 4.9-120 58.1-5.2 118.5 41.6 123.2 45.3 33-8.9 70.7-13.6 112.9-13.6 42.4 0 80.2 4.9 113.5 13.9 11.3-8.6 67.3-48.8 121.3-43.9 2.9 7.7 24.7 58.3 5.5 118 32.4 36.8 48.9 82.7 48.9 132.3 0 102.2-59 188.1-200 212.9a127.5 127.5 0 0138.1 91v112.5c.8 9 0 17.9 15 17.9 177.1-59.7 304.6-227 304.6-424.1 0-247.2-200.4-447.3-447.5-447.3z"></path></svg>
+            </a>
+            ${updateAt ? `<span class="last-modified">${SUPPORTED_LANG[lang].lastModified} ${import_dayjs.default.unix(updateAt).fromNow()}</span>` : ""}
+        </div>
     </div>
 `;
 var MODAL = (lang, ext = {}) => `
@@ -760,7 +790,7 @@ var IMAGE_MODAL = (lang) => `
     <div class="modal-content" style="position:relative; z-index:1001; max-width:680px; width:92vw; max-height:85vh; padding:20px 24px; box-sizing:border-box; border-radius:12px; display:flex; flex-direction:column; overflow:hidden; background:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.2);">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e1e4e8; padding-bottom:12px; margin-bottom:12px;">
             <div style="display:flex; align-items:center; gap:8px;">
-                <h3 style="margin:0; font-size:16px; color:#1f2328; font-weight:600;">🖼️ ${SUPPORTED_LANG[lang].imgMgrTitle || "图片管理"}</h3>
+                <h3 style="margin:0; font-size:16px; color:#1f2328; font-weight:600;">${SUPPORTED_LANG[lang].imgMgrTitle || "图片管理"}</h3>
                 <span id="img-mgr-quota-badge" style="font-size:11px; padding:2px 8px; border-radius:10px; background:#f0f6fc; color:#0969da; border:1px solid #d0d7de;">0.00MB / 200MB</span>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
@@ -775,9 +805,38 @@ var IMAGE_MODAL = (lang) => `
             <!-- Rendered by JS -->
         </div>
         <div id="img-mgr-empty" style="display:none; flex-direction:column; align-items:center; justify-content:center; padding:50px 0; color:#8c959f; font-size:13px;">
-            <div style="font-size:36px; margin-bottom:8px;">🖼️</div>
+            <div style="font-size:14px; margin-bottom:8px; color:#8c959f;">(暂无图片)</div>
             <div>${SUPPORTED_LANG[lang].noImages || "暂无上传的图片"}</div>
             <div style="font-size:12px; color:#afb8c1; margin-top:4px;">可在编辑区直接粘贴截屏 (Ctrl+V) 或点击右上角上传</div>
+        </div>
+    </div>
+</div>
+`;
+var HISTORY_MODAL = (lang) => `
+<div class="modal history-modal" id="history-mgr-modal" style="display:none; position:fixed; inset:0; z-index:1000; align-items:center; justify-content:center;">
+    <div class="modal-mask" id="history-mgr-mask" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(2px);"></div>
+    <div class="modal-content" style="position:relative; z-index:1001; max-width:720px; width:92vw; max-height:85vh; padding:20px 24px; box-sizing:border-box; border-radius:12px; display:flex; flex-direction:column; overflow:hidden; background:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e1e4e8; padding-bottom:12px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <h3 style="margin:0; font-size:16px; color:#1f2328; font-weight:600;">${SUPPORTED_LANG[lang].historyTitle || "历史版本快照"}</h3>
+                <span id="history-mgr-badge" style="font-size:11px; padding:2px 8px; border-radius:10px; background:#f0f6fc; color:#0969da; border:1px solid #d0d7de;">${SUPPORTED_LANG[lang].historyLimit || "滚动保留 5 个版本"}</span>
+            </div>
+            <span class="close-btn" id="history-mgr-close" style="cursor:pointer; font-size:18px; color:#57606a; padding:2px 6px;">✕</span>
+        </div>
+        <div id="history-mgr-body" style="flex:1; display:flex; gap:14px; min-height:260px; max-height:55vh; overflow:hidden;">
+            <div id="history-items-list" style="width:230px; border-right:1px solid #eaecef; padding-right:10px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
+            </div>
+            <div id="history-preview-panel" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span id="history-preview-title" style="font-size:12px; color:#57606a; font-weight:500;">选择版本查看内容</span>
+                    <button id="history-apply-btn" class="opt-button" style="display:none; background:#2da44e; color:#fff; border-color:#2da44e; padding:3px 12px; font-size:12px; font-weight:500; cursor:pointer;">${SUPPORTED_LANG[lang].restoreToThis || "恢复到此版本"}</button>
+                </div>
+                <textarea id="history-preview-box" readonly style="flex:1; width:100%; box-sizing:border-box; border:1px solid #d0d7de; border-radius:6px; padding:10px; font-family:monospace; font-size:12px; background:#f6f8fa; resize:none; outline:none; white-space:pre-wrap; color:#24292f;"></textarea>
+            </div>
+        </div>
+        <div id="history-mgr-empty" style="display:none; flex-direction:column; align-items:center; justify-content:center; padding:45px 0; color:#8c959f; font-size:13px;">
+            <div style="font-size:14px; margin-bottom:6px; color:#57606a;">${SUPPORTED_LANG[lang].historyEmpty || "当前笔记暂无历史快照"}</div>
+            <div style="font-size:12px; color:#afb8c1;">保存内容变动后将自动记录（间隔至少 1 分钟）</div>
         </div>
     </div>
 </div>
@@ -1219,7 +1278,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22) !important;
         z-index: 1000 !important;
       }
-      .image-modal .modal-content {
+      .image-modal .modal-content, .history-modal .modal-content {
         position: fixed !important;
         top: 50% !important;
         left: 50% !important;
@@ -1228,7 +1287,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         transform: translate(-50%, -50%) !important;
         margin: 0 !important;
         width: 90% !important;
-        max-width: 680px !important;
+        max-width: 720px !important;
         height: auto !important;
         min-height: 320px !important;
         max-height: 85vh !important;
@@ -1244,11 +1303,23 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         z-index: 1002 !important;
         overflow: hidden !important;
       }
+      .footer {
+        flex-wrap: wrap !important;
+        height: auto !important;
+        min-height: 28px !important;
+        gap: 6px !important;
+      }
+      .footer .opt {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 6px !important;
+      }
     </style>
 </head>
 <body>
     <!-- Top-left Sidebar Toggle Button -->
-    <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="菜单">☰</button>
+    <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="菜单"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:auto;"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
     <div id="sidebar-overlay" class="sidebar-overlay"></div>
     <div id="sidebar" class="sidebar">
       <div class="sidebar-header">
@@ -1282,6 +1353,13 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 <div class="layer_2">
                     <div class="layer_3">
                         ${tips ? `<div class="tips">${tips}</div>` : ""}
+                        <div id="draft-alert" style="display:none; margin-bottom:12px; padding:8px 12px; background:#fff8c5; border:1px solid #d4a72c; border-radius:6px; font-size:12px; color:#573a08; align-items:center; justify-content:space-between; box-shadow:0 1px 3px rgba(0,0,0,0.05); z-index:10; position:relative;">
+                            <span id="draft-alert-msg">${SUPPORTED_LANG[lang].draftDetected || "检测到本地未保存草稿"}</span>
+                            <div style="display:flex; gap:8px;">
+                                <button id="draft-restore-btn" type="button" class="opt-button" style="background:#2da44e; color:#fff; border-color:#2da44e; padding:2px 10px; font-size:12px; font-weight:500; cursor:pointer;">${SUPPORTED_LANG[lang].restoreDraft || "恢复草稿"}</button>
+                                <button id="draft-discard-btn" type="button" class="opt-button" style="padding:2px 8px; font-size:12px; cursor:pointer;">${SUPPORTED_LANG[lang].discardDraft || "放弃"}</button>
+                            </div>
+                        </div>
                         <textarea id="contents" class="contents full-width ${isEdit && !isMdMode ? "" : "hide"}" spellcheck="true" placeholder="${SUPPORTED_LANG[lang].emptyPH}">${content}</textarea>
                         ${isEdit && isMdMode ? `<div id="vditor" class="contents full-width"></div>` : ""}
                         ${!isEdit && isMdMode ? `<div id="preview-md" class="contents full-width"></div>` : ""}
@@ -1294,6 +1372,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     <div id="loading"></div>
     ${MODAL(lang, ext)}
     ${IMAGE_MODAL(lang)}
+    ${HISTORY_MODAL(lang)}
     ${LIGHTBOX()}
     ${FOOTER({ ...ext, isEdit, lang, isPrivateMode, path: title })}
     ${isEdit && isMdMode ? `<script src="//gcore.jsdelivr.net/npm/vditor@3.10.8/dist/index.min.js"><\/script>` : ""}
@@ -1785,8 +1864,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                       '</div>',
                       '<div style="display: flex; gap: 4px; margin-top: 2px;">',
                         '<button class="opt-button" data-action="insert" data-url="' + item.url + '" style="flex: 1; padding: 2px 4px; font-size: 11px;">${SUPPORTED_LANG[lang].insertImg || "插入"}</button>',
-                        '<button class="opt-button" data-action="copy" data-url="' + item.url + '" style="padding: 2px 6px; font-size: 11px;" title="复制 Markdown">📋</button>',
-                        '<button class="opt-button" data-action="delete" data-filename="' + item.filename + '" style="padding: 2px 6px; font-size: 11px; color: #cf222e;" title="删除图片">🗑️</button>',
+                        '<button class="opt-button" data-action="copy" data-url="' + item.url + '" style="padding: 2px 6px; font-size: 11px;" title="复制 Markdown">${SUPPORTED_LANG[lang].copy || "复制"}</button>',
+                        '<button class="opt-button" data-action="delete" data-filename="' + item.filename + '" style="padding: 2px 6px; font-size: 11px; color: #cf222e;" title="删除图片">${SUPPORTED_LANG[lang].delete || "删除"}</button>',
                       '</div>',
                     '</div>',
                   '</div>'
@@ -1981,6 +2060,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             value: contents.value || "",
             input(val) {
               contents.value = val;
+              if (typeof window.updateWordCount === "function") {
+                window.updateWordCount(val);
+              }
+              if (typeof window.triggerDraftSave === "function") {
+                window.triggerDraftSave(val);
+              }
               if (typeof contents.oninput === "function") {
                 contents.oninput();
               } else {
@@ -1998,6 +2083,278 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       })();
     <\/script>
     ` : ""}
+
+    <!-- Word Count, Auto-Draft Box & History Scripts -->
+    <script>
+      (function() {
+        // --- 1. Real-time Word & Character Count ---
+        const contents = document.querySelector("#contents");
+        const previewMd = document.querySelector("#preview-md");
+        const previewPlain = document.querySelector("#preview-plain");
+        const countEl = document.getElementById("status-word-count");
+
+        window.updateWordCount = function(text) {
+          if (!countEl) return;
+          if (typeof text !== "string") {
+            if (contents && contents.value !== undefined) text = contents.value;
+            else if (previewMd) text = previewMd.innerText || previewMd.textContent || "";
+            else if (previewPlain) text = previewPlain.innerText || previewPlain.textContent || "";
+            else text = "";
+          }
+          const cnMatches = text.match(/[\u4e00-\u9fa5]/g);
+          const cnCount = cnMatches ? cnMatches.length : 0;
+          const enText = text.replace(/[\u4e00-\u9fa5]/g, " ");
+          const enMatches = enText.match(/[a-zA-Z0-9_-]+/g);
+          const enCount = enMatches ? enMatches.length : 0;
+          const words = cnCount + enCount;
+          const chars = text.length;
+          const lines = text ? text.split("\n").length : 0;
+          countEl.textContent = "${SUPPORTED_LANG[lang].wordsCount || '字数'}: " + words + " · ${SUPPORTED_LANG[lang].charsCount || '字符'}: " + chars + " · " + lines + " ${SUPPORTED_LANG[lang].linesCount || '行'}";
+        };
+
+        window.updateWordCount();
+        window.addEventListener("load", function() { window.updateWordCount(); });
+
+        if (contents) {
+          contents.addEventListener("input", function() {
+            window.updateWordCount(contents.value);
+            if (typeof window.triggerDraftSave === "function") {
+              window.triggerDraftSave(contents.value);
+            }
+          });
+        }
+
+        // --- 2. LocalStorage Auto-Draft Box ---
+        const draftAlert = document.getElementById("draft-alert");
+        const draftMsg = document.getElementById("draft-alert-msg");
+        const restoreBtn = document.getElementById("draft-restore-btn");
+        const discardBtn = document.getElementById("draft-discard-btn");
+        const currentPath = window.location.pathname.replace(/^\/+|\/+$/g, "");
+        const isEditPage = ${Boolean(isEdit)};
+
+        if (isEditPage && contents && draftAlert && currentPath && !currentPath.startsWith("api") && !currentPath.startsWith("share")) {
+          const draftKey = "scn_draft_" + encodeURIComponent(currentPath);
+          window._cloudContent = contents.value || "";
+
+          function formatDraftTime(ts) {
+            const diff = Math.floor((Date.now() - ts) / 1000);
+            if (diff < 60) return "刚刚";
+            if (diff < 3600) return Math.floor(diff / 60) + " 分钟前";
+            if (diff < 86400) return Math.floor(diff / 3600) + " 小时前";
+            return Math.floor(diff / 86400) + " 天前";
+          }
+
+          try {
+            const raw = localStorage.getItem(draftKey);
+            if (raw) {
+              const data = JSON.parse(raw);
+              if (data && data.content && data.content !== window._cloudContent && data.content.trim().length > 0) {
+                if (data.time && (Date.now() - data.time < 7 * 24 * 3600 * 1000)) {
+                  draftMsg.textContent = "${SUPPORTED_LANG[lang].draftDetected || '检测到本地未保存草稿'} (" + formatDraftTime(data.time) + " 保存)";
+                  draftAlert.style.display = "flex";
+                } else {
+                  localStorage.removeItem(draftKey);
+                }
+              } else if (data && data.content === window._cloudContent) {
+                localStorage.removeItem(draftKey);
+              }
+            }
+          } catch(e) {}
+
+          if (restoreBtn) {
+            restoreBtn.onclick = function() {
+              try {
+                const raw = localStorage.getItem(draftKey);
+                if (raw) {
+                  const data = JSON.parse(raw);
+                  if (data && data.content) {
+                    contents.value = data.content;
+                    if (window.vditorInstance) {
+                      window.vditorInstance.setValue(data.content);
+                    }
+                    window.updateWordCount(data.content);
+                    if (typeof contents.oninput === "function") {
+                      contents.oninput();
+                    } else {
+                      contents.dispatchEvent(new Event("input", { bubbles: true }));
+                    }
+                  }
+                }
+              } catch(e) {}
+              draftAlert.style.display = "none";
+              localStorage.removeItem(draftKey);
+            };
+          }
+
+          if (discardBtn) {
+            discardBtn.onclick = function() {
+              localStorage.removeItem(draftKey);
+              draftAlert.style.display = "none";
+            };
+          }
+
+          let draftDebounceTimer = null;
+          window.triggerDraftSave = function(val) {
+            clearTimeout(draftDebounceTimer);
+            draftDebounceTimer = setTimeout(function() {
+              try {
+                if (val !== window._cloudContent && val.trim().length > 0) {
+                  localStorage.setItem(draftKey, JSON.stringify({
+                    content: val,
+                    time: Date.now()
+                  }));
+                } else if (val === window._cloudContent) {
+                  localStorage.removeItem(draftKey);
+                  if (draftAlert) draftAlert.style.display = "none";
+                }
+              } catch(e) {}
+            }, 600);
+          };
+
+          const nativeFetch = window.fetch;
+          window.fetch = async function(...args) {
+            const resp = await nativeFetch.apply(this, args);
+            try {
+              const url = args[0];
+              const opts = args[1] || {};
+              if (opts.method === "POST" && (!url || url === "" || url === window.location.pathname)) {
+                resp.clone().json().then(res => {
+                  if (res && res.err === 0) {
+                    window._cloudContent = contents.value;
+                    localStorage.removeItem(draftKey);
+                    if (draftAlert) draftAlert.style.display = "none";
+                  }
+                }).catch(() => {});
+              }
+            } catch(e) {}
+            return resp;
+          };
+        }
+
+        // --- 3. History Snapshots Manager ---
+        const histBtn = document.getElementById("opt-hist-btn");
+        const histModal = document.getElementById("history-mgr-modal");
+        const histMask = document.getElementById("history-mgr-mask");
+        const histClose = document.getElementById("history-mgr-close");
+        const itemsList = document.getElementById("history-items-list");
+        const previewBox = document.getElementById("history-preview-box");
+        const previewTitle = document.getElementById("history-preview-title");
+        const applyBtn = document.getElementById("history-apply-btn");
+        const emptyBox = document.getElementById("history-mgr-empty");
+        const bodyBox = document.getElementById("history-mgr-body");
+
+        let currentSnapshots = [];
+        let selectedSnapshot = null;
+
+        window.openHistoryManager = async function() {
+          if (!histModal) return;
+          histModal.style.display = "flex";
+          if (previewBox) previewBox.value = "";
+          if (applyBtn) applyBtn.style.display = "none";
+          if (previewTitle) previewTitle.textContent = "选择版本查看内容";
+          selectedSnapshot = null;
+          await loadHistorySnapshots();
+        };
+
+        window.closeHistoryManager = function() {
+          if (histModal) histModal.style.display = "none";
+        };
+
+        if (histBtn) histBtn.onclick = window.openHistoryManager;
+        if (histClose) histClose.onclick = window.closeHistoryManager;
+        if (histMask) histMask.onclick = window.closeHistoryManager;
+
+        async function loadHistorySnapshots() {
+          if (!itemsList) return;
+          itemsList.innerHTML = '<div style="padding:16px; color:#8c959f; font-size:12px; text-align:center;">正在加载快照...</div>';
+          try {
+            const resp = await fetch("/api/history?path=" + encodeURIComponent(currentPath));
+            const res = await resp.json();
+            if (res.err !== 0) {
+              itemsList.innerHTML = '<div style="padding:16px; color:#cf222e; font-size:12px; text-align:center;">加载失败: ' + (res.msg || "未知错误") + '</div>';
+              return;
+            }
+            currentSnapshots = res.data || [];
+            if (!currentSnapshots.length) {
+              if (bodyBox) bodyBox.style.display = "none";
+              if (emptyBox) emptyBox.style.display = "flex";
+              return;
+            }
+            if (bodyBox) bodyBox.style.display = "flex";
+            if (emptyBox) emptyBox.style.display = "none";
+
+            itemsList.innerHTML = "";
+            currentSnapshots.forEach((snap, idx) => {
+              const item = document.createElement("div");
+              item.style.cssText = "padding:8px 10px; border:1px solid #d0d7de; border-radius:6px; cursor:pointer; background:#fff; transition:all 0.15s ease; text-align:left;";
+              const sizeKb = (snap.size / 1024).toFixed(1);
+              item.innerHTML = [
+                '<div style="font-size:12px; font-weight:600; color:#1f2328; margin-bottom:2px;">' + (snap.dateStr || "历史版本 " + (idx + 1)) + '</div>',
+                '<div style="font-size:11px; color:#57606a; margin-bottom:4px;">大小: ' + snap.size + ' 字符 (' + sizeKb + ' KB)</div>',
+                '<div style="font-size:11px; color:#8c959f; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + (snap.preview || "(无预览)") + '</div>'
+              ].join("");
+
+              item.onmouseenter = function() { if (selectedSnapshot !== snap) item.style.background = "#f6f8fa"; };
+              item.onmouseleave = function() { if (selectedSnapshot !== snap) item.style.background = "#fff"; };
+              item.onclick = function() {
+                Array.from(itemsList.children).forEach(el => {
+                  el.style.borderColor = "#d0d7de";
+                  el.style.background = "#fff";
+                });
+                item.style.borderColor = "#0969da";
+                item.style.background = "#f0f6fc";
+                selectSnapshot(snap);
+              };
+              itemsList.appendChild(item);
+            });
+
+            if (itemsList.firstChild) {
+              itemsList.firstChild.click();
+            }
+          } catch(err) {
+            itemsList.innerHTML = '<div style="padding:16px; color:#cf222e; font-size:12px; text-align:center;">网络异常: ' + err.message + '</div>';
+          }
+        }
+
+        async function selectSnapshot(snap) {
+          selectedSnapshot = snap;
+          if (previewTitle) previewTitle.textContent = "快照时间: " + snap.dateStr;
+          if (previewBox) previewBox.value = "正在读取快照正文...";
+          if (applyBtn) applyBtn.style.display = "none";
+
+          try {
+            const resp = await fetch("/api/history/view?path=" + encodeURIComponent(currentPath) + "&id=" + snap.id);
+            const res = await resp.json();
+            if (res.err === 0 && res.data) {
+              const snapContent = res.data.content || "";
+              if (previewBox) previewBox.value = snapContent;
+              if (applyBtn) {
+                applyBtn.style.display = "inline-block";
+                applyBtn.onclick = function() {
+                  if (!confirm("${SUPPORTED_LANG[lang].restoreConfirm || '确定要将笔记恢复到此历史版本吗？当前编辑区内容将被替换。'}")) return;
+                  if (contents) contents.value = snapContent;
+                  if (window.vditorInstance) {
+                    window.vditorInstance.setValue(snapContent);
+                  }
+                  window.updateWordCount(snapContent);
+                  if (typeof contents.oninput === "function") {
+                    contents.oninput();
+                  } else if (contents) {
+                    contents.dispatchEvent(new Event("input", { bubbles: true }));
+                  }
+                  window.closeHistoryManager();
+                  alert("${SUPPORTED_LANG[lang].restoredMsg || '已恢复到所选历史版本并保存！'}");
+                };
+              }
+            } else {
+              if (previewBox) previewBox.value = "读取快照失败: " + (res.msg || "未知错误");
+            }
+          } catch(err) {
+            if (previewBox) previewBox.value = "读取快照异常: " + err.message;
+          }
+        }
+      })();
+    <\/script>
 </body>
 </html>
 `;
@@ -2067,7 +2424,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 </head>
 <body>
   <div class="login-card">
-    <div class="brand-icon">🔒</div>
+    <div class="brand-icon" style="display:flex; justify-content:center; align-items:center; margin-bottom:12px;">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#1f883d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+    </div>
     <h2>私有云笔记</h2>
     <p class="desc">请输入管理员密码进入工作台</p>
     <form id="login-form">
@@ -2169,7 +2528,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 </head>
 <body>
   <div class="login-card">
-    <div class="brand-icon">🔑</div>
+    <div class="brand-icon" style="display:flex; justify-content:center; align-items:center; margin-bottom:12px;">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0969da" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-2-2l2 2"></path><circle cx="7.5" cy="16.5" r="5.5"></circle><path d="m11.5 12.5 7.5-7.5M16 8l3 3M19 5l2 2"></path></svg>
+    </div>
     <h2>受保护的分享笔记</h2>
     <p class="desc">请输入提取码访问此笔记</p>
     <form id="share-pw-form">
@@ -2702,6 +3063,20 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       const ip = request.headers.get("eo-client-ip") || "unknown_ip";
       await kvDelete(`fails/${encodeURIComponent(ip)}_${encodeURIComponent(path)}`);
 
+      // Clean up history snapshots and index
+      try {
+        const histKey = `hist/${encodeURIComponent(path)}`;
+        const histList = await kvGet(histKey, "json");
+        if (Array.isArray(histList)) {
+          for (const h of histList) {
+            if (h && h.id) {
+              await store.delete(`history/${encodeURIComponent(path)}/${h.id}`);
+            }
+          }
+        }
+        await kvDelete(histKey);
+      } catch (e) {}
+
       return returnJSON(0, { deleted: path });
     } catch (err) {
       return returnJSON(500, "Delete failed: " + err.message);
@@ -2916,6 +3291,56 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
     const formData = await request.formData();
     const content = formData.get("t");
+
+    // History snapshot tracking:
+    // If note previously had content, and new content is different and non-empty
+    if (value && value !== content && value.trim().length > 0) {
+      try {
+        const histKey = `hist/${encodeURIComponent(path)}`;
+        let histList = [];
+        try {
+          const raw = await kvGet(histKey, "json");
+          if (Array.isArray(raw)) histList = raw;
+        } catch(e) {}
+
+        const now = Date.now();
+        const lastSnap = histList[0];
+        // Throttle snapshots: at least 60 seconds interval between snapshots
+        if (!lastSnap || (now - lastSnap.timestamp) >= 60000) {
+          const snapId = String(now);
+          const snapBlobKey = `history/${encodeURIComponent(path)}/${snapId}`;
+          await store.setJSON(snapBlobKey, {
+            content: value,
+            timestamp: now,
+            size: value.length
+          });
+
+          const preview = value.slice(0, 80).replace(/[\r\n]+/g, " ");
+          const dateStr = (0, import_dayjs2.default)(now).format("YYYY-MM-DD HH:mm:ss");
+
+          histList.unshift({
+            id: snapId,
+            timestamp: now,
+            dateStr,
+            size: value.length,
+            preview
+          });
+
+          while (histList.length > 5) {
+            const pruned = histList.pop();
+            if (pruned && pruned.id) {
+              try {
+                await store.delete(`history/${encodeURIComponent(path)}/${pruned.id}`);
+              } catch(e) {}
+            }
+          }
+          await kvPut(histKey, histList);
+        }
+      } catch (err) {
+        console.warn("History snapshot error:", err);
+      }
+    }
+
     try {
       await putNote(path, content, {
         ...metadata,
@@ -3256,6 +3681,90 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
   }
 
+  // 15. History Snapshots Management (Rolling 5 Snapshots)
+  async function checkNoteAuthOrAdmin(request, path) {
+    if (ADMIN_PASSWORD) {
+      const isAdmin = await checkAdminAuth(request);
+      if (!isAdmin) return false;
+      return true;
+    }
+    const { metadata } = await queryNote(path);
+    if (!metadata.pw) return true;
+    const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
+    return await checkAuth(cookie, path);
+  }
+
+  async function handleHistoryList(request) {
+    const url = new URL(request.url);
+    const path = url.searchParams.get("path") || "";
+    if (!path) {
+      return returnJSON(400, "Missing path parameter");
+    }
+    const authed = await checkNoteAuthOrAdmin(request, path);
+    if (!authed) {
+      return returnJSON(401, "Unauthorized");
+    }
+    try {
+      const histKey = `hist/${encodeURIComponent(path)}`;
+      let list = await kvGet(histKey, "json");
+      if (!Array.isArray(list)) list = [];
+      return returnJSON(0, list);
+    } catch (err) {
+      return returnJSON(500, "Failed to get history: " + err.message);
+    }
+  }
+
+  async function handleHistoryView(request) {
+    const url = new URL(request.url);
+    const path = url.searchParams.get("path") || "";
+    const id = url.searchParams.get("id") || "";
+    if (!path || !id) {
+      return returnJSON(400, "Missing path or id parameter");
+    }
+    const authed = await checkNoteAuthOrAdmin(request, path);
+    if (!authed) {
+      return returnJSON(401, "Unauthorized");
+    }
+    try {
+      const blobKey = `history/${encodeURIComponent(path)}/${id}`;
+      const snap = await store.get(blobKey, { type: "json", consistency: "strong" });
+      if (!snap) {
+        return returnJSON(404, "Snapshot not found");
+      }
+      return returnJSON(0, snap);
+    } catch (err) {
+      return returnJSON(500, "Failed to view snapshot: " + err.message);
+    }
+  }
+
+  async function handleHistoryRestore(request) {
+    if (request.method !== "POST") {
+      return returnJSON(405, "Method not allowed");
+    }
+    let body = {};
+    try {
+      body = await request.json();
+    } catch(e) {}
+    const { path, id } = body;
+    if (!path || !id) {
+      return returnJSON(400, "Missing path or id parameter");
+    }
+    const authed = await checkNoteAuthOrAdmin(request, path);
+    if (!authed) {
+      return returnJSON(401, "Unauthorized");
+    }
+    try {
+      const blobKey = `history/${encodeURIComponent(path)}/${id}`;
+      const snap = await store.get(blobKey, { type: "json", consistency: "strong" });
+      if (!snap) {
+        return returnJSON(404, "Snapshot not found");
+      }
+      return returnJSON(0, { content: snap.content });
+    } catch (err) {
+      return returnJSON(500, "Failed to restore snapshot: " + err.message);
+    }
+  }
+
   // Main dispatcher - zero complex regexes, 100% EdgeOne compliant
   async function route(request) {
     const url = new URL(request.url);
@@ -3295,6 +3804,15 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       if (method === "GET") {
         return handleImageGet(request, rest);
       }
+    }
+    if (method === "GET" && pathname === "/api/history") {
+      return handleHistoryList(request);
+    }
+    if (method === "GET" && pathname === "/api/history/view") {
+      return handleHistoryView(request);
+    }
+    if (method === "POST" && pathname === "/api/history/restore") {
+      return handleHistoryRestore(request);
     }
     if (method === "GET" && pathname === "/list") {
       return handleList(request);
