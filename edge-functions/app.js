@@ -1,4 +1,4 @@
-  let SALT, SECRET, LIST_SECRET, KV;
+  let SALT, SECRET, LIST_SECRET, KV, ADMIN_PASSWORD;
 import { getStore } from "@edgeone/pages-blob";
 const store = getStore("notepad");
   // 新增：用于记录错误次数的内存黑名单
@@ -558,17 +558,32 @@ const store = getStore("notepad");
 
   // node_modules/itty-router/dist/itty-router.min.mjs
   function e({ base: t = "", routes: n = [] } = {}) {
-    return { __proto__: new Proxy({}, { get: (e2, a, o) => (e3, ...r) => n.push([a.toUpperCase(), RegExp(`^${(t + e3).replace(/(\/?)\*/g, "($1.*)?").replace(/\/$/, "").replace(/:(\w+)(\?)?(\.)?/g, "$2(?<$1>[^/]+)$2$3").replace(/\.(?=[\w(])/, "\\.").replace(/\)\.\?\(([^\[]+)\[\^/g, "?)\\.?($1(?<=\\.)[^\\.")}/*$`), r]) && o }), routes: n, async handle(e2, ...r) {
-      let a, o, t2 = new URL(e2.url);
-      e2.query = {}; if (t2.searchParams && t2.searchParams.forEach) { t2.searchParams.forEach((v, k) => { e2.query[k] = v; }); }
-      for (var [p, s, u] of n)
-        if ((p === e2.method || "ALL" === p) && (o = t2.pathname.match(s))) {
-          e2.params = o.groups;
-          for (var c of u)
-            if (void 0 !== (a = await c(e2.proxy || e2, ...r)))
-              return a;
+    return {
+      __proto__: new Proxy({}, {
+        get: (e2, a, o) => (e3, ...r) => n.push([
+          a.toUpperCase(),
+          e3 instanceof RegExp ? e3 : RegExp(`^${(t + e3).replace(/(\/?)\*/g, "($1.*)?").replace(/\/$/, "").replace(/:(\w+)(\?)?(\.)?/g, "$2(?<$1>[^/]+)$2$3").replace(/\.(?=[\w(])/, "\\.").replace(/\)\.\?\(([^\\[]+)\[\^/g, "?)\\.?($1(?<=\\.)[^\\.")}/*$`),
+          r
+        ]) && o
+      }),
+      routes: n,
+      async handle(e2, ...r) {
+        let a, o, t2 = new URL(e2.url);
+        e2.query = {};
+        if (t2.searchParams && t2.searchParams.forEach) {
+          t2.searchParams.forEach((v, k) => { e2.query[k] = v; });
         }
-    } };
+        for (var [p, s, u] of n) {
+          if ((p === e2.method || "ALL" === p) && (o = t2.pathname.match(s))) {
+            e2.params = o.groups || {};
+            for (var c of u) {
+              if (void 0 !== (a = await c(e2.proxy || e2, ...r)))
+                return a;
+            }
+          }
+        }
+      }
+    };
   }
 
   // src/index.js
@@ -584,10 +599,13 @@ const store = getStore("notepad");
     Edit: () => Edit,
     NeedPasswd: () => NeedPasswd,
     Page404: () => Page404,
-    Share: () => Share
+    Share: () => Share,
+    AdminLogin: () => AdminLogin,
+    NeedSharePasswd: () => NeedSharePasswd
   });
   var import_dayjs = __toESM(require_dayjs_min());
   var import_relativeTime = __toESM(require_relativeTime());
+  import_dayjs.default.extend(import_relativeTime.default);
 
   // src/constant.js
   var CDN_PREFIX = "//gcore.jsdelivr.net/gh/s0urcelab/serverless-cloud-notepad@master/static";
@@ -603,25 +621,51 @@ const store = getStore("notepad");
       tip404: "404, Nothing here",
       edit: "Edit",
       preview: "Preview",
-      tipDblClick: "Double-click to edit"
+      delete: "Delete",
+      confirmDel: "Permanently delete this note? This action cannot be undone!",
+      newNote: "New",
+      searchNotes: "Search notes...",
+      shareTitle: "Share Note",
+      shareSlugLabel: "Custom Share Slug",
+      sharePwLabel: "Access Code (Optional)",
+      sharePwPh: "Leave empty for public read-only",
+      saveShare: "Save & Generate Link",
+      disableShare: "Disable Share",
+      shareUrlLabel: "Share Link",
+      privateVault: "Private Vault",
+      publicVault: "Public Mode",
+      logout: "Logout",
+      noNotes: "No notes yet"
     },
     "zh": {
-      setPW: "\u8BBE\u7F6E\u5BC6\u7801",
-      changePW: "\u4FEE\u6539\u5BC6\u7801",
-      share: "\u5206\u4EAB",
-      lastModified: "\u4E0A\u6B21\u4FDD\u5B58",
-      copy: "\u590D\u5236",
-      emptyPH: "\u770B\u6765\u4F60\u662F\u7B2C\u4E00\u4E2A\u5230\u8FD9\u513F\u7684\u4EBA\uFF0C\u5199\u70B9\u4EC0\u4E48\u5427...",
-      tipEncrypt: "\u8FD9\u662F\u4E00\u7BC7\u52A0\u5BC6\u7B14\u8BB0\uFF0C\u4F60\u5FC5\u987B\u5148\u8F93\u5165\u5BC6\u7801",
-      tip404: "404\uFF0C\u4F60\u8981\u627E\u7684\u4E1C\u897F\u5E76\u4E0D\u5B58\u5728",
-      edit: "\u7F16\u8F91",
-      preview: "\u9884\u89C8",
-      tipDblClick: "\u53CC\u51FB\u53EF\u5FEB\u901F\u7F16\u8F91"
+      setPW: "设置密码",
+      changePW: "修改密码",
+      share: "分享",
+      lastModified: "上次保存",
+      copy: "复制",
+      emptyPH: "看来你是第一个到这儿的人，写点什么吧...",
+      tipEncrypt: "这是一篇加密笔记，你必须先输入密码！",
+      tip404: "404，你要找的东西并不存在",
+      edit: "编辑",
+      preview: "预览",
+      delete: "删除",
+      confirmDel: "确定要永久删除此笔记吗？此操作无法撤销！",
+      newNote: "新建",
+      searchNotes: "搜索笔记...",
+      shareTitle: "分享笔记",
+      shareSlugLabel: "自定义短链后缀",
+      sharePwLabel: "访问提取码 (可选)",
+      sharePwPh: "留空即公开只读，填写即需要密码",
+      saveShare: "保存并生成链接",
+      disableShare: "关闭分享",
+      shareUrlLabel: "分享链接",
+      privateVault: "私有笔记库",
+      publicVault: "公共便签",
+      logout: "退出登录",
+      noNotes: "暂无笔记"
     }
   };
 
-  // src/template.js
-  import_dayjs.default.extend(import_relativeTime.default);
   var SWITCHER = (text, open, className = "") => `
 <span class="opt-desc">${text}</span>
 <label class="opt-switcher ${className}">
@@ -629,13 +673,14 @@ const store = getStore("notepad");
   <span class="slider round"></span>
 </label>
 `;
-  var FOOTER = ({ lang, isEdit, updateAt, pw, mode, share }) => `
+  var FOOTER = ({ lang, isEdit, updateAt, pw, mode, share, isPrivateMode, path }) => `
     <div class="footer">
         ${isEdit ? `
             <div class="opt">
-                <button class="opt-button opt-pw">${pw ? SUPPORTED_LANG[lang].changePW : SUPPORTED_LANG[lang].setPW}</button>
+                ${!isPrivateMode ? `<button class="opt-button opt-pw">${pw ? SUPPORTED_LANG[lang].changePW : SUPPORTED_LANG[lang].setPW}</button>` : ""}
                 ${SWITCHER("Markdown", mode === "md", "opt-mode")}
-                ${SWITCHER(SUPPORTED_LANG[lang].share, share, "opt-share")}
+                <button class="opt-button opt-share-trigger" style="margin-left:6px;">${SUPPORTED_LANG[lang].share}</button>
+                <button id="opt-del-btn" class="opt-button" style="margin-left:6px;color:#cf222e;" title="${SUPPORTED_LANG[lang].delete}">${SUPPORTED_LANG[lang].delete}</button>
             </div>
             ` : ""}
         <a class="github-link" title="Github" target="_blank" href="https://github.com/kafuneri/edgeone-cloud-notepad" rel="noreferrer">
@@ -644,19 +689,42 @@ const store = getStore("notepad");
         ${updateAt ? `<span class="last-modified">${SUPPORTED_LANG[lang].lastModified} ${import_dayjs.default.unix(updateAt).fromNow()}</span>` : ""}
     </div>
 `;
-  var MODAL = (lang) => `
+var MODAL = (lang, ext = {}) => `
 <div class="modal share-modal">
     <div class="modal-mask"></div>
-    <div class="modal-content">
-        <span class="close-btn">x</span>
-        <div class="modal-body">
-            <input type="text" readonly value="" />
-            <button class="opt-button">${SUPPORTED_LANG[lang].copy}</button>
+    <div class="modal-content" style="max-width: 440px; padding: 24px; box-sizing: border-box; border-radius: 8px;">
+        <span class="close-btn">✕</span>
+        <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #1f2328; font-weight: 600;">${SUPPORTED_LANG[lang].shareTitle}</h3>
+        
+        <div style="margin-bottom: 14px; text-align: left;">
+          <label style="display: block; font-size: 12px; color: #57606a; margin-bottom: 5px; font-weight: 500;">${SUPPORTED_LANG[lang].shareSlugLabel}</label>
+          <div style="display: flex; align-items: center;">
+            <span style="font-size: 13px; color: #6e7781; background: #f6f8fa; padding: 7px 10px; border: 1px solid #d0d7de; border-right: none; border-radius: 6px 0 0 6px;">/share/</span>
+            <input type="text" id="share-custom-slug" value="${ext.shareSlug || ""}" placeholder="自定义短链后缀" style="flex: 1; padding: 7px 10px; border: 1px solid #d0d7de; border-radius: 0 6px 6px 0; font-size: 13px; outline: none;" />
+          </div>
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 12px; color: #57606a; margin-bottom: 5px; font-weight: 500;">${SUPPORTED_LANG[lang].sharePwLabel}</label>
+          <input type="password" id="share-custom-pw" placeholder="${SUPPORTED_LANG[lang].sharePwPh}" style="width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1px solid #d0d7de; border-radius: 6px; font-size: 13px; outline: none;" />
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+          <button id="save-share-btn" class="opt-button" style="flex: 1; background: #2da44e; color: #fff; border-color: #2da44e; padding: 7px 14px; font-weight: 600;">${SUPPORTED_LANG[lang].saveShare}</button>
+          <button id="disable-share-btn" class="opt-button" style="color: #cf222e; border-color: #d0d7de; padding: 7px 12px;">${SUPPORTED_LANG[lang].disableShare}</button>
+        </div>
+
+        <div id="share-link-box" style="display: ${ext.share ? "block" : "none"}; padding-top: 12px; border-top: 1px solid #eaecef; text-align: left;">
+          <label style="display: block; font-size: 12px; color: #57606a; margin-bottom: 5px; font-weight: 500;">${SUPPORTED_LANG[lang].shareUrlLabel}</label>
+          <div style="display: flex; gap: 6px;">
+            <input type="text" id="share-final-url" readonly value="" style="flex: 1; padding: 6px 10px; font-size: 12px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; outline: none;" />
+            <button class="opt-button" id="copy-share-btn" style="white-space: nowrap;">${SUPPORTED_LANG[lang].copy}</button>
+          </div>
         </div>
     </div>
 </div>
 `;
-  var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt }) => {
+var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPrivateMode }) => {
     const isMdMode = ext.mode === "md";
     return `
 <!DOCTYPE html>
@@ -670,6 +738,7 @@ const store = getStore("notepad");
     <link href="${CDN_PREFIX}/css/app.min.css" rel="stylesheet" media="screen" />
     ${isEdit && isMdMode ? `<link href="//gcore.jsdelivr.net/npm/vditor@3.10.8/dist/index.css" rel="stylesheet" />` : ""}
     <style>
+      /* Markdown view styling */
       #preview-md {
         line-height: 1.7;
         color: #24292f;
@@ -767,6 +836,8 @@ const store = getStore("notepad");
       .stack .layer_1 .layer_2 .layer_3 .contents.hide {
         display: none !important;
       }
+
+      /* Vditor instant rendering overrides */
       #vditor {
         border: none !important;
         background: transparent !important;
@@ -791,9 +862,292 @@ const store = getStore("notepad");
         color: #3a3b3c !important;
         background: transparent !important;
       }
+
+      /* Sidebar toggle button (top-left minimalist trigger) */
+      .sidebar-toggle-btn {
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #d0d7de;
+        color: #57606a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 100;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        font-size: 16px;
+      }
+      .sidebar-toggle-btn:hover {
+        background: #ffffff;
+        color: #1f2328;
+        border-color: #8c959f;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      }
+
+      /* Sidebar overlay */
+      .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(2px);
+        z-index: 998;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.25s ease, visibility 0.25s ease;
+      }
+      .sidebar-overlay.active {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      /* Sidebar container */
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 290px;
+        height: 100%;
+        background: #ffffff;
+        border-right: 1px solid #e1e4e8;
+        z-index: 999;
+        transform: translateX(-100%);
+        transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        flex-direction: column;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.08);
+        box-sizing: border-box;
+      }
+      .sidebar.active {
+        transform: translateX(0);
+      }
+
+      /* Sidebar header */
+      .sidebar-header {
+        padding: 16px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #eaecef;
+      }
+      .sidebar-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        font-size: 15px;
+        color: #24292f;
+      }
+      .sidebar-close-btn {
+        background: none;
+        border: none;
+        color: #6a737d;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+      .sidebar-close-btn:hover { background: #eaecef; color: #24292f; }
+
+      /* Sidebar search and actions */
+      .sidebar-actions {
+        padding: 12px 14px;
+        display: flex;
+        gap: 8px;
+        border-bottom: 1px solid #f0f2f5;
+      }
+      .sidebar-search-input {
+        flex: 1;
+        padding: 6px 10px;
+        font-size: 13px;
+        border: 1px solid #d1d5da;
+        border-radius: 5px;
+        outline: none;
+        background: #fbfcfd;
+      }
+      .sidebar-search-input:focus {
+        border-color: #0969da;
+        background: #fff;
+      }
+      .sidebar-new-btn {
+        padding: 6px 12px;
+        background: #2da44e;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .sidebar-new-btn:hover { background: #2c974b; }
+
+      /* Tree view */
+      .sidebar-tree {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px 8px;
+      }
+      .tree-node {
+        margin-bottom: 2px;
+      }
+      .tree-folder-title {
+        display: flex;
+        align-items: center;
+        padding: 6px 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #444d56;
+        border-radius: 4px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .tree-folder-title:hover {
+        background: #f1f3f5;
+      }
+      .tree-folder-arrow {
+        display: inline-block;
+        width: 14px;
+        font-size: 10px;
+        transition: transform 0.15s ease;
+        color: #8c959f;
+      }
+      .tree-folder.collapsed .tree-folder-arrow {
+        transform: rotate(-90deg);
+      }
+      .tree-folder.collapsed .tree-folder-content {
+        display: none;
+      }
+      .tree-folder-content {
+        padding-left: 14px;
+        border-left: 1px solid #e1e4e8;
+        margin-left: 8px;
+      }
+      .tree-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 10px;
+        font-size: 13px;
+        color: #24292f;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        position: relative;
+      }
+      .tree-item:hover {
+        background: #eef1f4;
+      }
+      .tree-item.active {
+        background: #e1e7ed;
+        font-weight: 600;
+        color: #0969da;
+      }
+      .tree-item-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1;
+        text-decoration: none;
+        color: inherit;
+      }
+      .tree-item-actions {
+        display: none;
+        align-items: center;
+        gap: 4px;
+      }
+      .tree-item:hover .tree-item-actions {
+        display: flex;
+      }
+      .tree-item-del-btn {
+        background: none;
+        border: none;
+        color: #cf222e;
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 12px;
+      }
+      .tree-item-del-btn:hover {
+        background: #ffebe9;
+      }
+
+      /* Sidebar footer */
+      .sidebar-footer {
+        padding: 12px 16px;
+        border-top: 1px solid #eaecef;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #57606a;
+        background: #fafbfc;
+      }
+      .sidebar-logout-btn {
+        background: none;
+        border: none;
+        color: #cf222e;
+        cursor: pointer;
+        font-size: 12px;
+        padding: 4px 6px;
+      }
+      .sidebar-logout-btn:hover {
+        text-decoration: underline;
+      }
+      /* Share modal content override */
+      .share-modal .modal-content {
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        bottom: auto !important;
+        right: auto !important;
+        transform: translate(-50%, -50%) !important;
+        margin: 0 !important;
+        width: 90% !important;
+        max-width: 440px !important;
+        height: auto !important;
+        display: block !important;
+        padding: 24px 28px !important;
+        box-sizing: border-box !important;
+        background: #ffffff !important;
+        border-radius: 12px !important;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22) !important;
+        z-index: 1000 !important;
+      }
     </style>
 </head>
 <body>
+    <!-- Top-left Sidebar Toggle Button -->
+    <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="菜单">☰</button>
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+    <div id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand">
+          <span>Cloud Notepad</span>
+        </div>
+        <button id="sidebar-close-btn" class="sidebar-close-btn" title="关闭">✕</button>
+      </div>
+      <div class="sidebar-actions">
+        <input type="text" id="sidebar-search" class="sidebar-search-input" placeholder="${SUPPORTED_LANG[lang].searchNotes}" />
+        <button id="sidebar-new-btn" class="sidebar-new-btn">+ ${SUPPORTED_LANG[lang].newNote}</button>
+      </div>
+      <div class="sidebar-tree" id="sidebar-tree">
+        <div style="padding:16px;color:#8c959f;text-align:center;">${SUPPORTED_LANG[lang].searchNotes}</div>
+      </div>
+      <div class="sidebar-footer">
+        <span>${isPrivateMode ? SUPPORTED_LANG[lang].privateVault : SUPPORTED_LANG[lang].publicVault}</span>
+        ${isPrivateMode ? `<button id="sidebar-logout-btn" class="sidebar-logout-btn">${SUPPORTED_LANG[lang].logout}</button>` : ""}
+      </div>
+    </div>
+
     <div class="note-container">
         <div class="stack">
             <div class="layer_1">
@@ -810,14 +1164,312 @@ const store = getStore("notepad");
         </div>
     </div>
     <div id="loading"></div>
-    ${MODAL(lang)}
-    ${FOOTER({ ...ext, isEdit, lang })}
+    ${MODAL(lang, ext)}
+    ${FOOTER({ ...ext, isEdit, lang, isPrivateMode, path: title })}
     ${isEdit && isMdMode ? `<script src="//gcore.jsdelivr.net/npm/vditor@3.10.8/dist/index.min.js"><\/script>` : ""}
     ${!isEdit && isMdMode || ext.share ? `<script src="${CDN_PREFIX}/js/purify.min.js"><\/script>` : ""}
     ${!isEdit && isMdMode ? `<script src="${CDN_PREFIX}/js/marked.min.js"><\/script>` : ""}
     <script src="${CDN_PREFIX}/js/clip.min.js"><\/script>
     <script src="${CDN_PREFIX}/js/app.min.js"><\/script>
     ${showPwPrompt ? "<script>passwdPrompt()<\/script>" : ""}
+
+    <!-- Sidebar, Delete & Share Scripts -->
+    <script>
+      (function() {
+        // --- 1. Sidebar Logic ---
+        const toggleBtn = document.getElementById("sidebar-toggle-btn");
+        const closeBtn = document.getElementById("sidebar-close-btn");
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("sidebar-overlay");
+        const searchInput = document.getElementById("sidebar-search");
+        const newBtn = document.getElementById("sidebar-new-btn");
+        const treeContainer = document.getElementById("sidebar-tree");
+        const logoutBtn = document.getElementById("sidebar-logout-btn");
+        let allNotes = [];
+
+        function openSidebar() {
+          if (sidebar) sidebar.classList.add("active");
+          if (overlay) overlay.classList.add("active");
+          loadNotes();
+        }
+
+        function closeSidebar() {
+          if (sidebar) sidebar.classList.remove("active");
+          if (overlay) overlay.classList.remove("active");
+        }
+
+        if (toggleBtn) toggleBtn.onclick = openSidebar;
+        if (closeBtn) closeBtn.onclick = closeSidebar;
+        if (overlay) overlay.onclick = closeSidebar;
+
+        if (logoutBtn) {
+          logoutBtn.onclick = async function() {
+            if (confirm("${SUPPORTED_LANG[lang].logout}?")) {
+              await fetch("/api/logout", { method: "POST" });
+              window.location.reload();
+            }
+          };
+        }
+
+        if (newBtn) {
+          newBtn.onclick = function() {
+            const name = prompt("${lang === 'zh' ? '输入新笔记名称 (支持用 / 分类，如 工作/周报):' : 'Enter note name (supports / for folders):'}");
+            if (name && name.trim()) {
+              const clean = name.trim().replace(new RegExp('^/+', 'g'), '');
+              window.location.href = "/" + clean;
+            }
+          };
+        }
+
+        async function loadNotes() {
+          try {
+            const res = await fetch("/api/notes");
+            const data = await res.json();
+            if (data.err === 0 && Array.isArray(data.data)) {
+              allNotes = data.data;
+              renderTree(allNotes);
+            } else {
+              treeContainer.innerHTML = '<div style="color:#cf222e;padding:16px;text-align:center;">' + (data.msg || "加载失败") + '</div>';
+            }
+          } catch (e) {
+            treeContainer.innerHTML = '<div style="color:#cf222e;padding:16px;text-align:center;">网络错误</div>';
+          }
+        }
+
+        if (searchInput) {
+          searchInput.oninput = function() {
+            const q = searchInput.value.toLowerCase().trim();
+            if (!q) {
+              renderTree(allNotes);
+            } else {
+              const filtered = allNotes.filter(n => n.path.toLowerCase().includes(q));
+              renderTree(filtered, true);
+            }
+          };
+        }
+
+        function renderTree(notes, forceExpand) {
+          if (!treeContainer) return;
+          if (notes.length === 0) {
+            treeContainer.innerHTML = '<div style="color:#8c959f;padding:16px;text-align:center;">${SUPPORTED_LANG[lang].noNotes}</div>';
+            return;
+          }
+
+          const root = { children: {}, notes: [] };
+          for (const note of notes) {
+            const parts = note.path.split("/");
+            let curr = root;
+            for (let i = 0; i < parts.length - 1; i++) {
+              const p = parts[i];
+              if (!curr.children[p]) curr.children[p] = { name: p, children: {}, notes: [] };
+              curr = curr.children[p];
+            }
+            curr.notes.push(note);
+          }
+
+          const currentPath = decodeURIComponent(window.location.pathname.replace(new RegExp('^/+', 'g'), ''));
+
+          function renderNode(node) {
+            let html = "";
+            for (const folderName in node.children) {
+              const folder = node.children[folderName];
+              html += '<div class="tree-folder' + (forceExpand ? '' : '') + '">';
+              html += '  <div class="tree-folder-title">';
+              html += '    <span class="tree-folder-arrow">▼</span>';
+              html += '    <svg class="tree-icon" viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75z"></path></svg>';
+              html += '    <span>' + folder.name + '</span>';
+              html += '  </div>';
+              html += '  <div class="tree-folder-content">';
+              html += renderNode(folder);
+              html += '  </div>';
+              html += '</div>';
+            }
+            for (const note of node.notes) {
+              const isActive = note.path === currentPath;
+              const displayName = note.path.split("/").pop();
+              html += '<div class="tree-item ' + (isActive ? 'active' : '') + '">';
+              html += '  <a class="tree-item-text" href="/' + encodeURI(note.path) + '" title="' + note.path + '">';
+              if (note.share) {
+                html += '    <svg class="tree-icon" viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"></path></svg>';
+              } else {
+                html += '    <svg class="tree-icon" viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm7.75 3.25V2.06l2.44 2.44Z"></path></svg>';
+              }
+              html += displayName;
+              html += '  </a>';
+              html += '  <div class="tree-item-actions">';
+              html += '    <button class="tree-item-del-btn" data-path="' + encodeURIComponent(note.path) + '" title="${SUPPORTED_LANG[lang].delete}">✕</button>';
+              html += '  </div>';
+              html += '</div>';
+            }
+            return html;
+          }
+
+          treeContainer.innerHTML = renderNode(root);
+        }
+
+        // Tree click event delegation (folder collapse & note deletion)
+        if (treeContainer) {
+          treeContainer.onclick = function(e) {
+            const delBtn = e.target.closest(".tree-item-del-btn");
+            if (delBtn) {
+              e.preventDefault();
+              e.stopPropagation();
+              window.deleteNote(delBtn.dataset.path, e);
+              return;
+            }
+            const folderTitle = e.target.closest(".tree-folder-title");
+            if (folderTitle) {
+              e.preventDefault();
+              e.stopPropagation();
+              folderTitle.parentElement.classList.toggle("collapsed");
+              return;
+            }
+          };
+        }
+
+        window.deleteNote = async function(encodedPath, e) {
+          if (e) e.stopPropagation();
+          const path = decodeURIComponent(encodedPath);
+          const confirmMsg = "${lang === 'zh' ? '确定要永久删除笔记【' : 'Permanently delete note: '}" + path + "${lang === 'zh' ? '】吗？此操作无法撤销！' : '?' }";
+          if (!confirm(confirmMsg)) return;
+
+          try {
+            const res = await fetch("/" + encodeURI(path) + "/delete", { method: "POST" });
+            const data = await res.json();
+            if (data.err === 0) {
+              const currentPath = decodeURIComponent(window.location.pathname.replace(new RegExp('^/+', 'g'), ''));
+              if (currentPath === path) {
+                window.location.href = "/";
+              } else {
+                loadNotes();
+              }
+            } else {
+              alert(data.msg || "删除失败");
+            }
+          } catch (err) {
+            alert("删除异常: " + err.message);
+          }
+        };
+
+        // Footer delete button
+        const delBtn = document.querySelector("#opt-del-btn");
+        if (delBtn) {
+          delBtn.onclick = function() {
+            const currentPath = decodeURIComponent(window.location.pathname.replace(new RegExp('^/+', 'g'), ''));
+            if (currentPath) {
+              window.deleteNote(encodeURIComponent(currentPath));
+            }
+          };
+        }
+
+        // --- 2. Share Modal Logic ---
+        const shareModal = document.querySelector(".share-modal");
+        const shareTriggerBtn = document.querySelector(".opt-share-trigger");
+        const shareCloseBtn = document.querySelector(".share-modal .close-btn");
+        const saveShareBtn = document.querySelector("#save-share-btn");
+        const disableShareBtn = document.querySelector("#disable-share-btn");
+        const copyShareBtn = document.querySelector("#copy-share-btn");
+        const shareCustomSlug = document.querySelector("#share-custom-slug");
+        const shareCustomPw = document.querySelector("#share-custom-pw");
+        const shareFinalUrl = document.querySelector("#share-final-url");
+        const shareLinkBox = document.querySelector("#share-link-box");
+
+        function openShareModal() {
+          if (shareModal) {
+            shareModal.style.display = "block";
+            const currentSlug = shareCustomSlug.value.trim() || "${ext.shareSlug || ""}";
+            if (currentSlug) {
+              shareFinalUrl.value = window.location.origin + "/share/" + currentSlug;
+              shareLinkBox.style.display = "block";
+            }
+          }
+        }
+
+        function closeShareModal() {
+          if (shareModal) shareModal.style.display = "none";
+        }
+
+        if (shareTriggerBtn) shareTriggerBtn.onclick = openShareModal;
+        if (shareCloseBtn) shareCloseBtn.onclick = closeShareModal;
+        if (shareModal) {
+          const mask = shareModal.querySelector(".modal-mask");
+          if (mask) mask.onclick = closeShareModal;
+        }
+
+        if (saveShareBtn) {
+          saveShareBtn.onclick = async function() {
+            const slug = shareCustomSlug.value.trim();
+            const pw = shareCustomPw.value.trim();
+            saveShareBtn.innerText = "保存中...";
+            try {
+              const res = await fetch(window.location.pathname + "/setting", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  share: true,
+                  shareSlug: slug,
+                  sharePw: pw
+                })
+              });
+              const data = await res.json();
+              saveShareBtn.innerText = "${SUPPORTED_LANG[lang].saveShare}";
+              if (data.err === 0) {
+                const finalSlug = (data.data && data.data.slug) || slug;
+                shareCustomSlug.value = finalSlug;
+                shareFinalUrl.value = window.location.origin + "/share/" + finalSlug;
+                shareLinkBox.style.display = "block";
+                alert("${lang === 'zh' ? '分享链接已生成！' : 'Share link generated!'}");
+              } else {
+                alert(data.msg || "分享失败");
+              }
+            } catch (err) {
+              saveShareBtn.innerText = "${SUPPORTED_LANG[lang].saveShare}";
+              alert("请求异常: " + err.message);
+            }
+          };
+        }
+
+        if (disableShareBtn) {
+          disableShareBtn.onclick = async function() {
+            if (!confirm("${lang === 'zh' ? '确定要关闭此笔记的对外分享吗？' : 'Disable share for this note?'}")) return;
+            try {
+              const res = await fetch(window.location.pathname + "/setting", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ share: false })
+              });
+              const data = await res.json();
+              if (data.err === 0) {
+                shareLinkBox.style.display = "none";
+                shareCustomSlug.value = "";
+                shareCustomPw.value = "";
+                alert("${lang === 'zh' ? '已关闭对外分享' : 'Sharing disabled'}");
+                closeShareModal();
+              } else {
+                alert(data.msg || "操作失败");
+              }
+            } catch (err) {
+              alert("请求异常: " + err.message);
+            }
+          };
+        }
+
+        if (copyShareBtn) {
+          copyShareBtn.onclick = function() {
+            if (shareFinalUrl && shareFinalUrl.value) {
+              navigator.clipboard.writeText(shareFinalUrl.value).then(() => {
+                alert("${SUPPORTED_LANG[lang].copy}!");
+              }).catch(() => {
+                shareFinalUrl.select();
+                document.execCommand("copy");
+                alert("${SUPPORTED_LANG[lang].copy}!");
+              });
+            }
+          };
+        }
+      })();
+    </script>
+
     ${isEdit && isMdMode ? `
     <script>
       (function() {
@@ -859,9 +1511,214 @@ const store = getStore("notepad");
 `;
   };
   var Edit = (data) => HTML({ isEdit: true, ...data });
-  var Share = (data) => HTML(data);
+  var Share = (data) => HTML({ isEdit: false, ...data });
   var NeedPasswd = (data) => HTML({ tips: SUPPORTED_LANG[data.lang].tipEncrypt, showPwPrompt: true, ...data });
   var Page404 = (data) => HTML({ tips: SUPPORTED_LANG[data.lang].tip404, ...data });
+
+  var AdminLogin = ({ lang = "zh", title = "私有云笔记" }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${title} — 登录</title>
+  <style>
+    body {
+      background: #f4f6f8;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .login-card {
+      background: #ffffff;
+      padding: 36px 32px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .brand-icon { font-size: 38px; margin-bottom: 12px; }
+    h2 { margin: 0 0 8px 0; font-size: 20px; color: #1f2328; font-weight: 600; }
+    p.desc { margin: 0 0 24px 0; color: #656d76; font-size: 13px; }
+    input[type="password"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 11px 14px;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      margin-bottom: 16px;
+      transition: border-color 0.2s;
+    }
+    input[type="password"]:focus { border-color: #0969da; box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.15); }
+    button.submit-btn {
+      width: 100%;
+      padding: 11px;
+      background: #1f883d;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button.submit-btn:hover { background: #1a7f37; }
+    .error-msg { color: #cf222e; font-size: 13px; margin-top: 12px; display: none; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="brand-icon">🔒</div>
+    <h2>私有云笔记</h2>
+    <p class="desc">请输入管理员密码进入工作台</p>
+    <form id="login-form">
+      <input type="password" id="passwd" placeholder="管理员密码" autofocus required />
+      <button type="submit" class="submit-btn" id="btn-text">解锁进入</button>
+      <div id="error" class="error-msg"></div>
+    </form>
+  </div>
+  <script>
+    document.getElementById("login-form").onsubmit = async function(e) {
+      e.preventDefault();
+      const pw = document.getElementById("passwd").value;
+      const errEl = document.getElementById("error");
+      const btn = document.getElementById("btn-text");
+      errEl.style.display = "none";
+      btn.innerText = "校验中...";
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: pw })
+        });
+        const data = await res.json();
+        if (data.err === 0) {
+          window.location.reload();
+        } else {
+          errEl.innerText = data.msg || "密码错误";
+          errEl.style.display = "block";
+          btn.innerText = "解锁进入";
+        }
+      } catch (err) {
+        errEl.innerText = "网络异常，请重试";
+        errEl.style.display = "block";
+        btn.innerText = "解锁进入";
+      }
+    };
+  </script>
+</body>
+</html>
+`;
+
+  var NeedSharePasswd = ({ lang = "zh", title = "分享笔记", slug = "" }) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${title} — 访问密码</title>
+  <style>
+    body {
+      background: #f4f6f8;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .login-card {
+      background: #ffffff;
+      padding: 36px 32px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .brand-icon { font-size: 38px; margin-bottom: 12px; }
+    h2 { margin: 0 0 8px 0; font-size: 20px; color: #1f2328; font-weight: 600; }
+    p.desc { margin: 0 0 24px 0; color: #656d76; font-size: 13px; }
+    input[type="password"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 11px 14px;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      margin-bottom: 16px;
+      transition: border-color 0.2s;
+    }
+    input[type="password"]:focus { border-color: #0969da; box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.15); }
+    button.submit-btn {
+      width: 100%;
+      padding: 11px;
+      background: #0969da;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button.submit-btn:hover { background: #0860ca; }
+    .error-msg { color: #cf222e; font-size: 13px; margin-top: 12px; display: none; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="brand-icon">🔑</div>
+    <h2>受保护的分享笔记</h2>
+    <p class="desc">请输入提取码访问此笔记</p>
+    <form id="share-pw-form">
+      <input type="password" id="passwd" placeholder="访问提取码" autofocus required />
+      <button type="submit" class="submit-btn" id="btn-text">验证进入</button>
+      <div id="error" class="error-msg"></div>
+    </form>
+  </div>
+  <script>
+    document.getElementById("share-pw-form").onsubmit = async function(e) {
+      e.preventDefault();
+      const pw = document.getElementById("passwd").value;
+      const errEl = document.getElementById("error");
+      const btn = document.getElementById("btn-text");
+      errEl.style.display = "none";
+      btn.innerText = "校验中...";
+      try {
+        const res = await fetch("/share/${encodeURIComponent(slug)}/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ passwd: pw })
+        });
+        const data = await res.json();
+        if (data.err === 0) {
+          window.location.reload();
+        } else {
+          errEl.innerText = data.msg || "提取码错误";
+          errEl.style.display = "block";
+          btn.innerText = "验证进入";
+        }
+      } catch (err) {
+        errEl.innerText = "网络异常，请重试";
+        errEl.style.display = "block";
+        btn.innerText = "验证进入";
+      }
+    };
+  </script>
+</body>
+</html>
+`;
+
 
   // src/helper.js
   var genRandomStr = (n) => {
@@ -883,10 +1740,11 @@ const store = getStore("notepad");
     };
     const errTempl = {
       err: code,
-      msg: JSON.stringify(data)
+      msg: typeof data === "string" ? data : JSON.stringify(data)
     };
     const ret = code ? errTempl : successTempl;
     return new Response(JSON.stringify(ret), {
+      status: (code >= 400 && code < 600) ? code : 200,
       headers: {
         "content-type": "application/json;charset=UTF-8",
         ...headers
@@ -999,11 +1857,109 @@ const store = getStore("notepad");
 
   // src/index.js
   var router = e();
-  router.get("/", (request) => {
+
+  async function checkAdminAuth(request) {
+    if (!ADMIN_PASSWORD) return true;
+    const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
+    if (!cookie.admin_token) return false;
+    try {
+      const valid = await import_cloudflare_worker_jwt.default.verify(cookie.admin_token, SECRET);
+      if (valid) {
+        const payload = import_cloudflare_worker_jwt.default.decode(cookie.admin_token);
+        if (payload && payload.role === "admin") return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
+  // 1. Root route
+  router.get("/", async (request) => {
+    const lang = getI18n(request);
+    if (ADMIN_PASSWORD) {
+      const isAdmin = await checkAdminAuth(request);
+      if (!isAdmin) {
+        return returnPage("AdminLogin", { lang, title: "私有云笔记" });
+      }
+    }
     const newHash = genRandomStr(3);
     const u = new URL(request.url);
     return Response.redirect(`${u.origin}/${newHash}`, 302);
   });
+
+  // 2. Admin Auth APIs
+  router.post("/api/login", async (request) => {
+    if (!ADMIN_PASSWORD) {
+      return returnJSON(400, "Private mode is not active.");
+    }
+    try {
+      const { password } = await request.json();
+      if (password !== ADMIN_PASSWORD) {
+        return returnJSON(401, "管理员密码错误");
+      }
+      const token = await import_cloudflare_worker_jwt.default.sign({
+        role: "admin",
+        exp: Math.floor(Date.now() / 1000) + (30 * 24 * 3600)
+      }, SECRET);
+
+      return returnJSON(0, { ok: true }, {
+        "Set-Cookie": import_cookie.default.serialize("admin_token", token, {
+          path: "/",
+          expires: (0, import_dayjs2.default)().add(30, "day").toDate(),
+          httpOnly: true,
+          sameSite: "lax"
+        })
+      });
+    } catch (e) {
+      return returnJSON(400, "Bad Request");
+    }
+  });
+
+  router.post("/api/logout", async (request) => {
+    return returnJSON(0, { ok: true }, {
+      "Set-Cookie": import_cookie.default.serialize("admin_token", "", {
+        path: "/",
+        expires: (0, import_dayjs2.default)().subtract(100, "day").toDate(),
+        httpOnly: true,
+        sameSite: "lax"
+      })
+    });
+  });
+
+  // 3. Notes tree API for Sidebar
+  router.get("/api/notes", async (request) => {
+    if (ADMIN_PASSWORD) {
+      const isAdmin = await checkAdminAuth(request);
+      if (!isAdmin) {
+        return returnJSON(401, "Unauthorized");
+      }
+    }
+
+    try {
+      const { blobs } = await store.list({ prefix: "notes/", consistency: "strong" });
+      const notes = await Promise.all((blobs || []).map(async (blob) => {
+        const notePath = blob.key.slice("notes/".length);
+        let metadata = {};
+        try {
+          const data = await store.get(blob.key, { type: "json", consistency: "strong" });
+          if (data && data.metadata) metadata = data.metadata;
+        } catch (err) {}
+        return {
+          path: notePath,
+          updateAt: metadata?.updateAt || 0,
+          mode: metadata?.mode || "plain",
+          share: !!metadata?.share,
+          shareSlug: metadata?.shareSlug || ""
+        };
+      }));
+
+      notes.sort((a, b) => (b.updateAt || 0) - (a.updateAt || 0));
+      return returnJSON(0, notes);
+    } catch (err) {
+      return returnJSON(500, err.message);
+    }
+  });
+
+  // 4. List View (/list)
   router.get("/list", async (request) => {
     if (!LIST_SECRET) {
       return new Response("List view is disabled by administrator.", { status: 403 });
@@ -1022,7 +1978,6 @@ const store = getStore("notepad");
       if (scheme !== "Basic" || !encoded) {
         throw new Error("Malformed auth");
       }
-      
       const decoded = atob(encoded);
       const index = decoded.indexOf(":");
       const password = decoded.substring(index + 1);
@@ -1050,32 +2005,30 @@ const store = getStore("notepad");
 
     noteList.sort((a, b) => (b.metadata?.updateAt || 0) - (a.metadata?.updateAt || 0));
 
-    const rows = noteList.map((key) => `
+    const rows = noteList.map((item) => `
       <tr>
-        <td><a href="/${encodeURI(key.name)}">${key.name}</a></td>
-        <td>${key.metadata && key.metadata.updateAt ? (() => {
-      const date = new Date(key.metadata.updateAt * 1e3);
-      const pad = (num) => num.toString().padStart(2, "0");
-      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-    })() : "N/A"}
-        </td>
+        <td><a href="/${encodeURI(item.name)}">${item.name}</a></td>
+        <td>${item.metadata?.updateAt ? (0, import_dayjs.default)(item.metadata.updateAt * 1e3).format("YYYY-MM-DD HH:mm:ss") : "-"}</td>
       </tr>
     `).join("");
-    
+
     const html = `
       <!DOCTYPE html>
       <html>
         <head>
           <title>Note List</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-            th { background-color: #f4f4f4; }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 24px; color: #1f2328; }
+            table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+            th, td { padding: 10px 14px; border: 1px solid #d0d7de; text-align: left; }
+            th { background-color: #f6f8fa; font-weight: 600; }
+            tr:hover { background-color: #f6f8fa; }
+            a { color: #0969da; text-decoration: none; }
+            a:hover { text-decoration: underline; }
           </style>
         </head>
         <body>
-          <h1>Note List</h1>
+          <h2>Note List (${noteList.length})</h2>
           <table>
             <thead>
               <tr>
@@ -1088,62 +2041,73 @@ const store = getStore("notepad");
             </tbody>
           </table>
         </body>
-      </html>`;
-      
+      </html>
+    `;
     return new Response(html, {
       headers: { "Content-Type": "text/html;charset=UTF-8" }
     });
   });
-  router.get("/share/:md5", async (request) => {
+
+  // 5. Share View (/share/:slug)
+  router.get(/^\/share\/(?<slug>[^/]+)\/*$/, async (request) => {
     const lang = getI18n(request);
-    const { md5 } = request.params;
-    const path = await kvGet(`share/${md5}`);
-    if (!!path) {
-      const { value, metadata } = await queryNote(path);
-      return returnPage("Share", {
-        lang,
-        title: decodeURIComponent(path),
-        content: value,
-        ext: metadata
-      });
+    const slug = decodeURIComponent(request.params.slug);
+    const rawShare = await kvGet(`share/${slug}`, "json");
+    if (!rawShare) {
+      return returnPage("Page404", { lang, title: "404 Share Not Found" });
     }
-    return returnPage("Page404", { lang, title: "404" });
-  });
-  router.get("/:path", async (request) => {
-    const lang = getI18n(request);
-    const { path } = request.params;
-    const title = decodeURIComponent(path);
-    const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
+
+    const shareObj = typeof rawShare === "string" ? { path: rawShare, sharePw: "" } : rawShare;
+    const { path, sharePw } = shareObj;
+
+    if (sharePw) {
+      const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
+      const cookieKey = `share_auth_${encodeURIComponent(slug)}`;
+      let isShareValid = false;
+      if (cookie[cookieKey]) {
+        try {
+          const valid = await import_cloudflare_worker_jwt.default.verify(cookie[cookieKey], SECRET);
+          if (valid) {
+            const payload = import_cloudflare_worker_jwt.default.decode(cookie[cookieKey]);
+            if (payload && payload.slug === slug) isShareValid = true;
+          }
+        } catch (e) {}
+      }
+
+      if (!isShareValid) {
+        return returnPage("NeedSharePasswd", {
+          lang,
+          title: slug,
+          slug
+        });
+      }
+    }
+
     const { value, metadata } = await queryNote(path);
-    if (!metadata.pw) {
-      return returnPage("Edit", {
-        lang,
-        title,
-        content: value,
-        ext: metadata
-      });
-    }
-    const valid = await checkAuth(cookie, path);
-    if (valid) {
-      return returnPage("Edit", {
-        lang,
-        title,
-        content: value,
-        ext: metadata
-      });
-    }
-    return returnPage("NeedPasswd", { lang, title });
+    return returnPage("Share", {
+      lang,
+      title: slug,
+      content: value,
+      ext: metadata,
+      isPrivateMode: !!ADMIN_PASSWORD
+    });
   });
-  router.post("/:path/auth", async (request) => {
-    const { path } = request.params;
+
+  // 6. Share Password Verification (/share/:slug/auth)
+  router.post(/^\/share\/(?<slug>[^/]+)\/auth\/*$/, async (request) => {
+    const slug = decodeURIComponent(request.params.slug);
     const lang = getI18n(request);
-    const ip = request.headers.get("eo-client-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || request.headers.get("cf-connecting-ip") || "unknown_ip";
-    
-    // 细粒度隔离：绑定 IP 与当前笔记路径，存入 KV（兼备 Blob 容灾）
-    const failsKey = `fails/${encodeURIComponent(ip)}_${encodeURIComponent(path)}`;
+    const ip = request.headers.get("eo-client-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown_ip";
+    const failsKey = `fails/share_${encodeURIComponent(ip)}_${encodeURIComponent(slug)}`;
     const now = Date.now();
 
-    // 1. 读取当前失败记录与冷却时间（优先读取 KV 缓存）
+    const rawShare = await kvGet(`share/${slug}`, "json");
+    if (!rawShare) {
+      return returnJSON(404, "Share not found");
+    }
+    const shareObj = typeof rawShare === "string" ? { path: rawShare, sharePw: "" } : rawShare;
+    const { sharePw } = shareObj;
+
     let failRecord = null;
     try {
       failRecord = await kvGet(failsKey, "json");
@@ -1151,30 +2115,143 @@ const store = getStore("notepad");
 
     let fails = 0;
     let unlockAt = 0;
-
     if (failRecord && failRecord.expireAt && now < failRecord.expireAt) {
       fails = parseInt(failRecord.count || "0");
       unlockAt = parseInt(failRecord.unlockAt || "0");
     }
 
-    // 2. 检查是否仍处于阶梯冷却锁定期中
     if (unlockAt > now) {
       const waitSeconds = Math.ceil((unlockAt - now) / 1000);
-      const msg = lang === "zh" 
-        ? `密码错误次数过多，请等待 ${waitSeconds} 秒后再试`
-        : `Too many failed attempts. Please wait ${waitSeconds}s before retrying.`;
+      const msg = lang === "zh" ? `密码错误次数过多，请等待 ${waitSeconds} 秒后再试` : `Too many failed attempts. Please wait ${waitSeconds}s before retrying.`;
       return new Response(JSON.stringify({ err: 429, msg, retryAfter: waitSeconds }), {
         status: 429,
         headers: { "Content-Type": "application/json;charset=UTF-8" }
       });
     }
 
-    // 3. 校验密码
     let isPasswordCorrect = false;
-    if (request.headers.get("Content-Type") === "application/json") {
+    try {
+      const { passwd } = await request.json();
+      if (sharePw) {
+        const storePw = await saltPw(passwd);
+        if (sharePw === storePw) {
+          isPasswordCorrect = true;
+        }
+      }
+    } catch (e) {}
+
+    if (isPasswordCorrect) {
+      try {
+        await kvDelete(failsKey);
+      } catch (e) {}
+      const token = await import_cloudflare_worker_jwt.default.sign({ slug }, SECRET);
+      const cookieKey = `share_auth_${encodeURIComponent(slug)}`;
+      return returnJSON(0, { refresh: true }, {
+        "Set-Cookie": import_cookie.default.serialize(cookieKey, token, {
+          path: `/share/${encodeURI(slug)}`,
+          expires: (0, import_dayjs2.default)().add(7, "day").toDate(),
+          httpOnly: true
+        })
+      });
+    }
+
+    fails++;
+    let cooldown = 0;
+    if (fails === 4) cooldown = 5;
+    else if (fails === 5) cooldown = 30;
+    else if (fails === 6) cooldown = 120;
+    else if (fails >= 7) cooldown = 900;
+
+    const newUnlockAt = cooldown > 0 ? now + (cooldown * 1000) : 0;
+    try {
+      await kvPut(failsKey, {
+        count: fails,
+        unlockAt: newUnlockAt,
+        expireAt: now + 1800 * 1000
+      });
+    } catch (e) {}
+
+    if (cooldown > 0) {
+      const msg = lang === "zh" ? `密码错误！已连续输错 ${fails} 次，请等待 ${cooldown} 秒后再试` : `Password auth failed! Too many attempts (${fails}), please wait ${cooldown}s before retrying.`;
+      return new Response(JSON.stringify({ err: 429, msg, retryAfter: cooldown }), {
+        status: 429,
+        headers: { "Content-Type": "application/json;charset=UTF-8" }
+      });
+    }
+
+    const errMsg = lang === "zh" ? "提取码错误！" : "Access code incorrect!";
+    return returnJSON(10002, errMsg);
+  });
+
+  // 7. Note Delete Endpoint (supports multi-level path)
+  router.post(/^\/(?<path>(?!api\/|share\/).+)\/delete\/*$/, async (request) => {
+    const path = decodeURIComponent(request.params.path);
+    const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
+    const { metadata } = await queryNote(path);
+
+    if (ADMIN_PASSWORD) {
+      const isAdmin = await checkAdminAuth(request);
+      if (!isAdmin) {
+        return returnJSON(401, "Unauthorized");
+      }
+    } else {
+      const valid = await checkAuth(cookie, path);
+      if (metadata.pw && !valid) {
+        return returnJSON(403, "Protected note: password required to delete.");
+      }
+    }
+
+    try {
+      await store.delete(`notes/${path}`);
+      if (metadata.shareSlug) {
+        await kvDelete(`share/${metadata.shareSlug}`);
+      }
+      const md5 = await MD5(path);
+      await kvDelete(`share/${md5}`);
+
+      const ip = request.headers.get("eo-client-ip") || "unknown_ip";
+      await kvDelete(`fails/${encodeURIComponent(ip)}_${encodeURIComponent(path)}`);
+
+      return returnJSON(0, { deleted: path });
+    } catch (err) {
+      return returnJSON(500, "Delete failed: " + err.message);
+    }
+  });
+
+  // 8. Note Password Verification (supports multi-level path)
+  router.post(/^\/(?<path>(?!api\/|share\/).+)\/auth\/*$/, async (request) => {
+    const path = decodeURIComponent(request.params.path);
+    const lang = getI18n(request);
+    const ip = request.headers.get("eo-client-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown_ip";
+    const failsKey = `fails/${encodeURIComponent(ip)}_${encodeURIComponent(path)}`;
+    const now = Date.now();
+
+    let failRecord = null;
+    try {
+      failRecord = await kvGet(failsKey, "json");
+    } catch (e) {}
+
+    let fails = 0;
+    let unlockAt = 0;
+    if (failRecord && failRecord.expireAt && now < failRecord.expireAt) {
+      fails = parseInt(failRecord.count || "0");
+      unlockAt = parseInt(failRecord.unlockAt || "0");
+    }
+
+    if (unlockAt > now) {
+      const waitSeconds = Math.ceil((unlockAt - now) / 1000);
+      const msg = lang === "zh" ? `密码错误次数过多，请等待 ${waitSeconds} 秒后再试` : `Too many failed attempts. Please wait ${waitSeconds}s before retrying.`;
+      return new Response(JSON.stringify({ err: 429, msg, retryAfter: waitSeconds }), {
+        status: 429,
+        headers: { "Content-Type": "application/json;charset=UTF-8" }
+      });
+    }
+
+    let isPasswordCorrect = false;
+    const ctype = request.headers.get("content-type") || request.headers.get("Content-Type") || "";
+    if (ctype.includes("application/json")) {
       const { passwd } = await request.json();
       const { metadata } = await queryNote(path);
-      
       if (metadata.pw) {
         const storePw = await saltPw(passwd);
         if (metadata.pw === storePw) {
@@ -1183,13 +2260,11 @@ const store = getStore("notepad");
       }
     }
 
-    // 4. 密码正确：立即重置计数，颁发 Token
     if (isPasswordCorrect) {
       try {
         await kvDelete(failsKey);
       } catch (e) {}
-      
-      const token = await import_cloudflare_worker_jwt2.default.sign({ path }, SECRET);
+      const token = await import_cloudflare_worker_jwt.default.sign({ path }, SECRET);
       return returnJSON(0, { refresh: true }, {
         "Set-Cookie": import_cookie.default.serialize("auth", token, {
           path: `/${encodeURI(path)}`,
@@ -1199,30 +2274,24 @@ const store = getStore("notepad");
       });
     }
 
-    // 5. 密码错误：递增失败计数并计算阶梯冷却时间
     fails++;
     let cooldown = 0;
-    if (fails === 4) cooldown = 5;         // 第4次：冷却 5 秒
-    else if (fails === 5) cooldown = 30;   // 第5次：冷却 30 秒
-    else if (fails === 6) cooldown = 120;  // 第6次：冷却 2 分钟
-    else if (fails >= 7) cooldown = 900;   // 第7次及以上：冷却 15 分钟
+    if (fails === 4) cooldown = 5;
+    else if (fails === 5) cooldown = 30;
+    else if (fails === 6) cooldown = 120;
+    else if (fails >= 7) cooldown = 900;
 
     const newUnlockAt = cooldown > 0 ? now + (cooldown * 1000) : 0;
-    // 整体记录保留 30 分钟无尝试后完全重置
-    const recordExpireAt = now + 1800 * 1000;
-
     try {
       await kvPut(failsKey, {
         count: fails,
         unlockAt: newUnlockAt,
-        expireAt: recordExpireAt
+        expireAt: now + 1800 * 1000
       });
     } catch (e) {}
 
     if (cooldown > 0) {
-      const msg = lang === "zh"
-        ? `密码错误！已连续输错 ${fails} 次，请等待 ${cooldown} 秒后再试`
-        : `Password auth failed! Too many attempts (${fails}), please wait ${cooldown}s before retrying.`;
+      const msg = lang === "zh" ? `密码错误！已连续输错 ${fails} 次，请等待 ${cooldown} 秒后再试` : `Password auth failed! Too many attempts (${fails}), please wait ${cooldown}s before retrying.`;
       return new Response(JSON.stringify({ err: 429, msg, retryAfter: cooldown }), {
         status: 429,
         headers: { "Content-Type": "application/json;charset=UTF-8" }
@@ -1232,14 +2301,22 @@ const store = getStore("notepad");
     const errMsg = lang === "zh" ? "密码错误！" : "Password auth failed!";
     return returnJSON(10002, errMsg);
   });
-  router.post("/:path/pw", async (request) => {
-    const { path } = request.params;
-    if (request.headers.get("Content-Type") === "application/json") {
+
+  // 9. Note Password Setting (supports multi-level path)
+  router.post(/^\/(?<path>(?!api\/|share\/).+)\/pw\/*$/, async (request) => {
+    const path = decodeURIComponent(request.params.path);
+    if (ADMIN_PASSWORD) {
+      const isAdmin = await checkAdminAuth(request);
+      if (!isAdmin) return returnJSON(401, "Unauthorized");
+    }
+
+    const ctype = request.headers.get("content-type") || request.headers.get("Content-Type") || "";
+    if (ctype.includes("application/json")) {
       const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
       const { passwd } = await request.json();
       const { value, metadata } = await queryNote(path);
       const valid = await checkAuth(cookie, path);
-      if (!metadata.pw || valid) {
+      if (ADMIN_PASSWORD || !metadata.pw || valid) {
         const pw = passwd ? await saltPw(passwd) : void 0;
         try {
           await putNote(path, value, {
@@ -1260,45 +2337,96 @@ const store = getStore("notepad");
       return returnJSON(10003, "Password setting failed!");
     }
   });
-  router.post("/:path/setting", async (request) => {
-    const { path } = request.params;
-    if (request.headers.get("Content-Type") === "application/json") {
+
+  // 10. Note Setting Update (supports multi-level path)
+  router.post(/^\/(?<path>(?!api\/|share\/).+)\/setting\/*$/, async (request) => {
+    const path = decodeURIComponent(request.params.path);
+    if (ADMIN_PASSWORD) {
+      const isAdmin = await checkAdminAuth(request);
+      if (!isAdmin) return returnJSON(401, "Unauthorized");
+    }
+
+    const ctype = request.headers.get("content-type") || request.headers.get("Content-Type") || "";
+    if (ctype.includes("application/json")) {
       const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
-      const { mode, share } = await request.json();
+      const { mode, share, shareSlug, sharePw } = await request.json();
       const { value, metadata } = await queryNote(path);
       const valid = await checkAuth(cookie, path);
-      if (!metadata.pw || valid) {
+      if (ADMIN_PASSWORD || !metadata.pw || valid) {
         try {
-          await putNote(path, value, {
-            ...metadata,
-            ...mode !== void 0 && { mode },
-            ...share !== void 0 && { share }
-          });
           const md5 = await MD5(path);
-          if (share) {
-            await kvPut(`share/${md5}`, path);
-            return returnJSON(0, md5);
-          }
-          if (share === false) {
+          let slug = metadata.shareSlug || md5;
+
+          if (share === true) {
+            slug = (shareSlug || slug).trim();
+            const shareData = {
+              path,
+              sharePw: sharePw ? await saltPw(sharePw) : (sharePw === "" ? "" : (metadata.sharePw || "")),
+              slug,
+              createdAt: Date.now()
+            };
+            await kvPut(`share/${slug}`, shareData);
+            if (slug !== md5) {
+              await kvPut(`share/${md5}`, shareData);
+            }
+            await putNote(path, value, {
+              ...metadata,
+              ...mode !== void 0 && { mode },
+              share: true,
+              shareSlug: slug,
+              hasSharePw: !!shareData.sharePw,
+              sharePw: shareData.sharePw
+            });
+            return returnJSON(0, { slug, hasSharePw: !!shareData.sharePw });
+          } else if (share === false) {
+            if (metadata.shareSlug) {
+              await kvDelete(`share/${metadata.shareSlug}`);
+            }
             await kvDelete(`share/${md5}`);
+            await putNote(path, value, {
+              ...metadata,
+              ...mode !== void 0 && { mode },
+              share: false,
+              shareSlug: null,
+              hasSharePw: false,
+              sharePw: ""
+            });
+            return returnJSON(0);
+          } else if (mode !== void 0) {
+            await putNote(path, value, {
+              ...metadata,
+              mode
+            });
+            return returnJSON(0);
           }
           return returnJSON(0);
         } catch (error) {
-          console.error(error);
+          console.error("Update setting error detail:", error);
+          return returnJSON(10004, "Update Setting failed: " + (error?.message || String(error)));
         }
       }
-      return returnJSON(10004, "Update Setting failed!");
+      return returnJSON(10004, "Update Setting failed: unauthorized note access");
     }
   });
-  router.post("/:path", async (request) => {
-    const { path } = request.params;
+
+  // 11. Save Note Content (supports multi-level path)
+  router.post(/^\/(?<path>(?!api\/|share\/)[^/].*)\/*$/, async (request) => {
+    const path = decodeURIComponent(request.params.path);
     const { value, metadata } = await queryNote(path);
-    const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
-    const valid = await checkAuth(cookie, path);
-    if (!metadata.pw || valid) {
+
+    if (ADMIN_PASSWORD) {
+      const isAdmin = await checkAdminAuth(request);
+      if (!isAdmin) {
+        return returnJSON(401, "Unauthorized");
+      }
     } else {
-      return returnJSON(10002, "Password auth failed! Try refreshing this page if you had just set a password.");
+      const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
+      const valid = await checkAuth(cookie, path);
+      if (metadata.pw && !valid) {
+        return returnJSON(10002, "Password auth failed! Try refreshing this page if you had just set a password.");
+      }
     }
+
     const formData = await request.formData();
     const content = formData.get("t");
     try {
@@ -1312,9 +2440,56 @@ const store = getStore("notepad");
     }
     return returnJSON(10001, "Blob insert fail!");
   });
+
+  // 12. View / Edit Note (supports multi-level path)
+  router.get(/^\/(?<path>(?!api\/|share\/|list)[^/].*)\/*$/, async (request) => {
+    const lang = getI18n(request);
+    const path = decodeURIComponent(request.params.path);
+    const title = path;
+
+    if (ADMIN_PASSWORD) {
+      const isAdmin = await checkAdminAuth(request);
+      if (!isAdmin) {
+        return returnPage("AdminLogin", { lang, title: "私有云笔记" });
+      }
+      const { value, metadata } = await queryNote(path);
+      return returnPage("Edit", {
+        lang,
+        title,
+        content: value,
+        ext: metadata,
+        isPrivateMode: true
+      });
+    }
+
+    // Public mode
+    const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
+    const { value, metadata } = await queryNote(path);
+    if (!metadata.pw) {
+      return returnPage("Edit", {
+        lang,
+        title,
+        content: value,
+        ext: metadata,
+        isPrivateMode: false
+      });
+    }
+    const valid = await checkAuth(cookie, path);
+    if (valid) {
+      return returnPage("Edit", {
+        lang,
+        title,
+        content: value,
+        ext: metadata,
+        isPrivateMode: false
+      });
+    }
+    return returnPage("NeedPasswd", { lang, title, isPrivateMode: false });
+  });
+
   router.all("*", (request) => {
     const lang = getI18n(request);
-    returnPage("Page404", { lang, title: "404" });
+    return returnPage("Page404", { lang, title: "404" });
   });
 
   export default async function onRequest(context) {
@@ -1322,6 +2497,7 @@ const store = getStore("notepad");
     SALT = env?.SCN_SALT || process.env?.SCN_SALT || "";
     SECRET = env?.SCN_SECRET || process.env?.SCN_SECRET || "";
     LIST_SECRET = env?.LIST_SECRET || process.env?.LIST_SECRET || "";
+    ADMIN_PASSWORD = env?.ADMIN_PASSWORD || process.env?.ADMIN_PASSWORD || "";
     KV = env?.notepad_kv || globalThis?.notepad_kv || null;
 
     try {
