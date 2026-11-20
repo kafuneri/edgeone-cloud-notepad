@@ -664,7 +664,17 @@ const store = new Proxy({}, {
       discardDraft: "Discard",
       wordsCount: "Words",
       charsCount: "Chars",
-      linesCount: "lines"
+      linesCount: "lines",
+      shareTtlLabel: "Expiration Time",
+      shareTtlNever: "Permanent",
+      shareTtl10m: "10 Minutes",
+      shareTtl1h: "1 Hour",
+      shareTtl1d: "1 Day",
+      shareTtl7d: "7 Days",
+      shareBurnLabel: "Burn After Reading (Destroyed after 1st view)",
+      burnAlertTip: "Notice: This note was shared with burn-after-reading. It has been destroyed on the server and cannot be viewed again once you close or refresh this page.",
+      burnBadge: "Burn After Reading",
+      rawDirectLink: "Raw"
     },
     "zh": {
       setPW: "设置密码",
@@ -701,6 +711,16 @@ const store = new Proxy({}, {
       saveShare: "保存并生成链接",
       disableShare: "关闭分享",
       shareUrlLabel: "分享链接",
+      shareTtlLabel: "有效时长",
+      shareTtlNever: "永久有效",
+      shareTtl10m: "10 分钟",
+      shareTtl1h: "1 小时",
+      shareTtl1d: "1 天",
+      shareTtl7d: "7 天",
+      shareBurnLabel: "阅后即焚 (首位访客读取后立即永久销毁)",
+      burnAlertTip: "注意：此笔记为阅后即焚分享，已在服务器端永久销毁，刷新或关闭此页面后将无法再次访问。",
+      burnBadge: "阅后即焚",
+      rawDirectLink: "Raw",
       privateVault: "私有笔记库",
       publicVault: "公共便签",
       logout: "退出登录",
@@ -737,6 +757,7 @@ const store = new Proxy({}, {
                 <button class="opt-button opt-share-trigger" style="margin-left:6px;">${SUPPORTED_LANG[lang].share}</button>
                 <button id="opt-img-btn" class="opt-button" style="margin-left:6px;" title="${SUPPORTED_LANG[lang].imgMgrTitle} (200MB)">${SUPPORTED_LANG[lang].imgMgr}</button>
                 <button id="opt-hist-btn" class="opt-button" style="margin-left:6px;" title="${SUPPORTED_LANG[lang].historyTitle}">${SUPPORTED_LANG[lang].history}</button>
+                <a href="${path ? ('/raw/' + encodeURI(path)) : '#'}" target="_blank" class="opt-button" style="text-decoration:none; margin-left:6px; display:inline-flex; align-items:center;" title="${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}">${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}</a>
                 <input type="file" id="img-upload-input" accept="image/*" multiple style="display:none;" />
             </div>
             ` : ""}
@@ -764,9 +785,27 @@ var MODAL = (lang, ext = {}) => `
           </div>
         </div>
 
-        <div style="margin-bottom: 16px; text-align: left;">
+        <div style="margin-bottom: 14px; text-align: left;">
           <label style="display: block; font-size: 12px; color: #57606a; margin-bottom: 5px; font-weight: 500;">${SUPPORTED_LANG[lang].sharePwLabel}</label>
           <input type="password" id="share-custom-pw" placeholder="${SUPPORTED_LANG[lang].sharePwPh}" style="width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1px solid #d0d7de; border-radius: 6px; font-size: 13px; outline: none;" />
+        </div>
+
+        <div style="margin-bottom: 14px; text-align: left;">
+          <label style="display: block; font-size: 12px; color: #57606a; margin-bottom: 5px; font-weight: 500;">${SUPPORTED_LANG[lang].shareTtlLabel}</label>
+          <select id="share-custom-ttl" style="width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1px solid #d0d7de; border-radius: 6px; font-size: 13px; background: #fff; outline: none; cursor: pointer;">
+            <option value="0" ${!ext.shareTtl ? "selected" : ""}>${SUPPORTED_LANG[lang].shareTtlNever}</option>
+            <option value="600" ${ext.shareTtl === 600 ? "selected" : ""}>${SUPPORTED_LANG[lang].shareTtl10m}</option>
+            <option value="3600" ${ext.shareTtl === 3600 ? "selected" : ""}>${SUPPORTED_LANG[lang].shareTtl1h}</option>
+            <option value="86400" ${ext.shareTtl === 86400 ? "selected" : ""}>${SUPPORTED_LANG[lang].shareTtl1d}</option>
+            <option value="604800" ${ext.shareTtl === 604800 ? "selected" : ""}>${SUPPORTED_LANG[lang].shareTtl7d}</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #1f2328; cursor: pointer; user-select: none;">
+            <input type="checkbox" id="share-burn-after-reading" ${ext.shareBurn ? "checked" : ""} style="width: 15px; height: 15px; cursor: pointer;" />
+            <span>${SUPPORTED_LANG[lang].shareBurnLabel}</span>
+          </label>
         </div>
 
         <div style="display: flex; gap: 8px; margin-bottom: 14px;">
@@ -775,7 +814,10 @@ var MODAL = (lang, ext = {}) => `
         </div>
 
         <div id="share-link-box" style="display: ${ext.share ? "block" : "none"}; padding-top: 12px; border-top: 1px solid #eaecef; text-align: left;">
-          <label style="display: block; font-size: 12px; color: #57606a; margin-bottom: 5px; font-weight: 500;">${SUPPORTED_LANG[lang].shareUrlLabel}</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+            <label style="font-size: 12px; color: #57606a; font-weight: 500;">${SUPPORTED_LANG[lang].shareUrlLabel}</label>
+            <div id="share-badges-wrap" style="display: flex; gap: 4px;"></div>
+          </div>
           <div style="display: flex; gap: 6px;">
             <input type="text" id="share-final-url" readonly value="" style="flex: 1; padding: 6px 10px; font-size: 12px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; outline: none;" />
             <button class="opt-button" id="copy-share-btn" style="white-space: nowrap;">${SUPPORTED_LANG[lang].copy}</button>
@@ -1587,8 +1629,27 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         const copyShareBtn = document.querySelector("#copy-share-btn");
         const shareCustomSlug = document.querySelector("#share-custom-slug");
         const shareCustomPw = document.querySelector("#share-custom-pw");
+        const shareCustomTtl = document.querySelector("#share-custom-ttl");
+        const shareBurnCheckbox = document.querySelector("#share-burn-after-reading");
         const shareFinalUrl = document.querySelector("#share-final-url");
         const shareLinkBox = document.querySelector("#share-link-box");
+        const shareBadgesWrap = document.querySelector("#share-badges-wrap");
+
+        function updateShareBadges(ttl, isBurn) {
+          if (!shareBadgesWrap) return;
+          const currentTtl = typeof ttl === "number" ? ttl : Number(shareCustomTtl ? shareCustomTtl.value : "${ext.shareTtl || 0}");
+          const currentBurn = typeof isBurn === "boolean" ? isBurn : (shareBurnCheckbox ? shareBurnCheckbox.checked : ${ext.shareBurn ? "true" : "false"});
+          let html = "";
+          if (currentBurn) {
+            html += '<span style="font-size:11px; padding:1px 6px; border-radius:10px; background:#ffebe9; color:#cf222e; border:1px solid #ffc1c0; font-weight:500;">${SUPPORTED_LANG[lang].burnBadge}</span>';
+          }
+          if (currentTtl > 0) {
+            const ttlMap = { 600: "${SUPPORTED_LANG[lang].shareTtl10m}", 3600: "${SUPPORTED_LANG[lang].shareTtl1h}", 86400: "${SUPPORTED_LANG[lang].shareTtl1d}", 604800: "${SUPPORTED_LANG[lang].shareTtl7d}" };
+            const ttlText = ttlMap[currentTtl] || (currentTtl + "s");
+            html += '<span style="font-size:11px; padding:1px 6px; border-radius:10px; background:#ddf4ff; color:#0969da; border:1px solid #b6e3ff; font-weight:500;">' + ttlText + '</span>';
+          }
+          shareBadgesWrap.innerHTML = html;
+        }
 
         function openShareModal() {
           if (shareModal) {
@@ -1597,6 +1658,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             if (currentSlug) {
               shareFinalUrl.value = window.location.origin + "/share/" + currentSlug;
               shareLinkBox.style.display = "block";
+              updateShareBadges();
             }
           }
         }
@@ -1616,6 +1678,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           saveShareBtn.onclick = async function() {
             const slug = shareCustomSlug.value.trim();
             const pw = shareCustomPw.value.trim();
+            const ttl = Number(shareCustomTtl ? shareCustomTtl.value : 0) || 0;
+            const burn = shareBurnCheckbox ? shareBurnCheckbox.checked : false;
+
             saveShareBtn.innerText = "保存中...";
             try {
               const res = await fetch(window.location.pathname + "/setting", {
@@ -1624,7 +1689,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 body: JSON.stringify({
                   share: true,
                   shareSlug: slug,
-                  sharePw: pw
+                  sharePw: pw,
+                  ttl: ttl,
+                  burnAfterReading: burn
                 })
               });
               const data = await res.json();
@@ -1634,6 +1701,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 shareCustomSlug.value = finalSlug;
                 shareFinalUrl.value = window.location.origin + "/share/" + finalSlug;
                 shareLinkBox.style.display = "block";
+                updateShareBadges(ttl, burn);
                 alert("${lang === 'zh' ? '分享链接已生成！' : 'Share link generated!'}");
               } else {
                 alert(data.msg || "分享失败");
@@ -1659,6 +1727,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 shareLinkBox.style.display = "none";
                 shareCustomSlug.value = "";
                 shareCustomPw.value = "";
+                if (shareCustomTtl) shareCustomTtl.value = "0";
+                if (shareBurnCheckbox) shareBurnCheckbox.checked = false;
+                if (shareBadgesWrap) shareBadgesWrap.innerHTML = "";
                 alert("${lang === 'zh' ? '已关闭对外分享' : 'Sharing disabled'}");
                 closeShareModal();
               } else {
@@ -2667,11 +2738,15 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
   }
 
-  async function kvPut(key, value) {
+  async function kvPut(key, value, options = {}) {
     if (KV) {
       try {
         const valStr = typeof value === "object" ? JSON.stringify(value) : String(value);
-        return await KV.put(key, valStr);
+        const kvOpts = {};
+        if (options && options.expirationTtl && typeof options.expirationTtl === "number" && options.expirationTtl > 0) {
+          kvOpts.expirationTtl = options.expirationTtl;
+        }
+        return await KV.put(key, valStr, kvOpts);
       } catch (e) {
         console.warn("KV.put failed, falling back to Blob:", e.message);
       }
@@ -2713,16 +2788,86 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
   async function checkAdminAuth(request) {
     if (!ADMIN_PASSWORD) return true;
-    const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
-    if (!cookie.admin_token) return false;
-    try {
-      const valid = await import_cloudflare_worker_jwt.default.verify(cookie.admin_token, SECRET);
-      if (valid) {
-        const payload = import_cloudflare_worker_jwt.default.decode(cookie.admin_token);
-        if (payload && payload.role === "admin") return true;
-      }
-    } catch (e) {}
+
+    // 1. Query parameter
+    const url = new URL(request.url);
+    const queryPw = url.searchParams.get("pw") || url.searchParams.get("password");
+    if (queryPw && queryPw === ADMIN_PASSWORD) return true;
+
+    // 2. Custom header
+    const headerPw = request.headers.get("x-note-pw") || request.headers.get("x-admin-password");
+    if (headerPw && headerPw === ADMIN_PASSWORD) return true;
+
+    // 3. HTTP Basic Auth
+    const authHeader = request.headers.get("authorization") || request.headers.get("Authorization") || "";
+    if (authHeader.toLowerCase().startsWith("basic ")) {
+      try {
+        const decoded = atob(authHeader.slice(6).trim());
+        const colonIdx = decoded.indexOf(":");
+        const pass = colonIdx >= 0 ? decoded.slice(colonIdx + 1) : decoded;
+        if (pass === ADMIN_PASSWORD) return true;
+      } catch (e) {}
+    }
+
+    // 4. Bearer Token or Header Token
+    let token = url.searchParams.get("token") || request.headers.get("x-admin-token");
+    if (!token && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.slice(7).trim();
+    }
+    if (!token) {
+      const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
+      token = cookie.admin_token;
+    }
+
+    if (token) {
+      try {
+        const valid = await import_cloudflare_worker_jwt.default.verify(token, SECRET);
+        if (valid) {
+          const payload = import_cloudflare_worker_jwt.default.decode(token);
+          if (payload && payload.role === "admin") return true;
+        }
+      } catch (e) {}
+    }
+
     return false;
+  }
+
+  async function checkNoteAuth(request, path, metadata) {
+    if (!metadata || !metadata.pw) return true;
+
+    const url = new URL(request.url);
+    const queryPw = url.searchParams.get("pw") || url.searchParams.get("password");
+    if (queryPw) {
+      const hashed = await saltPw(queryPw);
+      if (hashed === metadata.pw) return true;
+    }
+
+    const headerPw = request.headers.get("x-note-pw");
+    if (headerPw) {
+      const hashed = await saltPw(headerPw);
+      if (hashed === metadata.pw) return true;
+    }
+
+    const authHeader = request.headers.get("authorization") || request.headers.get("Authorization") || "";
+    if (authHeader.toLowerCase().startsWith("basic ")) {
+      try {
+        const decoded = atob(authHeader.slice(6).trim());
+        const colonIdx = decoded.indexOf(":");
+        const pass = colonIdx >= 0 ? decoded.slice(colonIdx + 1) : decoded;
+        const hashed = await saltPw(pass);
+        if (hashed === metadata.pw) return true;
+      } catch (e) {}
+    }
+
+    const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
+    return await checkAuth(cookie, path);
+  }
+
+  async function verifyNoteAccess(request, path, metadata) {
+    if (ADMIN_PASSWORD) {
+      return await checkAdminAuth(request);
+    }
+    return await checkNoteAuth(request, path, metadata);
   }
 
   // 1. Root route
@@ -2903,31 +3048,90 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
   }
 
   // 6. Share View (/share/:slug)
-  async function handleShareView(request, slug) {
+  async function handleShareView(request, slug, isRaw = false) {
     const lang = getI18n(request);
+    const ua = (request.headers.get("user-agent") || "").toLowerCase();
+    const accept = (request.headers.get("accept") || "").toLowerCase();
+    const isCurl = ua.includes("curl") || ua.includes("httpie") || ua.includes("wget");
+    const wantsRaw = isRaw || isCurl || accept === "text/plain" || accept === "text/markdown";
+
     const rawShare = await kvGet(`share/${slug}`, "json");
     if (!rawShare) {
+      if (wantsRaw) {
+        return new Response("404 Share Not Found or Expired\n", {
+          status: 404,
+          headers: { "Content-Type": "text/plain; charset=utf-8" }
+        });
+      }
       return returnPage("Page404", { lang, title: "404 Share Not Found" });
     }
 
     const shareObj = typeof rawShare === "string" ? { path: rawShare, sharePw: "" } : rawShare;
-    const { path, sharePw } = shareObj;
+    const { path, sharePw, expireAt, burnAfterReading } = shareObj;
+
+    // Check expiration TTL
+    const now = Date.now();
+    if (expireAt && now > expireAt) {
+      await kvDelete(`share/${slug}`);
+      const md5 = await MD5(path);
+      await kvDelete(`share/${md5}`);
+      if (wantsRaw) {
+        return new Response("404 Share Expired\n", {
+          status: 404,
+          headers: { "Content-Type": "text/plain; charset=utf-8" }
+        });
+      }
+      return returnPage("Page404", { lang, title: "404 Share Expired" });
+    }
 
     if (sharePw) {
-      const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
-      const cookieKey = `share_auth_${encodeURIComponent(slug)}`;
-      let isShareValid = false;
-      if (cookie[cookieKey]) {
+      const url = new URL(request.url);
+      const queryPw = url.searchParams.get("pw") || url.searchParams.get("password");
+      let pwMatched = false;
+      if (queryPw) {
+        const hashed = await saltPw(queryPw);
+        if (hashed === sharePw) pwMatched = true;
+      }
+      const headerPw = request.headers.get("x-note-pw");
+      if (headerPw) {
+        const hashed = await saltPw(headerPw);
+        if (hashed === sharePw) pwMatched = true;
+      }
+      const authHeader = request.headers.get("authorization") || request.headers.get("Authorization") || "";
+      if (authHeader.toLowerCase().startsWith("basic ")) {
         try {
-          const valid = await import_cloudflare_worker_jwt.default.verify(cookie[cookieKey], SECRET);
-          if (valid) {
-            const payload = import_cloudflare_worker_jwt.default.decode(cookie[cookieKey]);
-            if (payload && payload.slug === slug) isShareValid = true;
-          }
+          const decoded = atob(authHeader.slice(6).trim());
+          const colonIdx = decoded.indexOf(":");
+          const pass = colonIdx >= 0 ? decoded.slice(colonIdx + 1) : decoded;
+          const hashed = await saltPw(pass);
+          if (hashed === sharePw) pwMatched = true;
         } catch (e) {}
       }
 
-      if (!isShareValid) {
+      if (!pwMatched) {
+        const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
+        const cookieKey = `share_auth_${encodeURIComponent(slug)}`;
+        if (cookie[cookieKey]) {
+          try {
+            const valid = await import_cloudflare_worker_jwt.default.verify(cookie[cookieKey], SECRET);
+            if (valid) {
+              const payload = import_cloudflare_worker_jwt.default.decode(cookie[cookieKey]);
+              if (payload && payload.slug === slug) pwMatched = true;
+            }
+          } catch (e) {}
+        }
+      }
+
+      if (!pwMatched) {
+        if (wantsRaw) {
+          return new Response("Error: Password required for this share. Provide via ?pw=, -H \"x-note-pw: ...\", or -u :password\n", {
+            status: 401,
+            headers: {
+              "Content-Type": "text/plain; charset=utf-8",
+              "WWW-Authenticate": 'Basic realm="Share"'
+            }
+          });
+        }
         return returnPage("NeedSharePasswd", {
           lang,
           title: slug,
@@ -2937,11 +3141,45 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
 
     const { value, metadata } = await queryNote(path);
+
+    // Burn After Reading: destroy immediately upon first authorized access!
+    if (burnAfterReading) {
+      await kvDelete(`share/${slug}`);
+      const md5 = await MD5(path);
+      await kvDelete(`share/${md5}`);
+      try {
+        await putNote(path, value, {
+          ...metadata,
+          share: false,
+          shareSlug: null,
+          hasSharePw: false,
+          sharePw: "",
+          shareBurn: false
+        });
+      } catch (e) {
+        console.warn("Failed to reset note metadata after burn:", e);
+      }
+    }
+
+    if (wantsRaw) {
+      return new Response(value || "", {
+        headers: {
+          "Content-Type": "text/markdown; charset=utf-8",
+          "Cache-Control": "no-cache, no-store, must-revalidate"
+        }
+      });
+    }
+
+    const tips = burnAfterReading
+      ? `<div style="background:#ffebe9; border:1px solid #ff8182; color:#cf222e; padding:10px 14px; border-radius:6px; font-weight:500; font-size:13px; margin-bottom:12px;">${SUPPORTED_LANG[lang].burnAlertTip || "注意：此笔记为阅后即焚分享，已在服务器端永久销毁，刷新或关闭此页面后将无法再次访问。"}</div>`
+      : "";
+
     return returnPage("Share", {
       lang,
       title: slug,
       content: value,
       ext: metadata,
+      tips,
       isPrivateMode: !!ADMIN_PASSWORD
     });
   }
@@ -2958,6 +3196,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       return returnJSON(404, "Share not found");
     }
     const shareObj = typeof rawShare === "string" ? { path: rawShare, sharePw: "" } : rawShare;
+    if (shareObj.expireAt && Date.now() > shareObj.expireAt) {
+      await kvDelete(`share/${slug}`);
+      const md5 = await MD5(shareObj.path);
+      await kvDelete(`share/${md5}`);
+      return returnJSON(404, "Share expired");
+    }
     const { sharePw } = shareObj;
 
     let failRecord = null;
@@ -3211,7 +3455,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     const ctype = request.headers.get("content-type") || request.headers.get("Content-Type") || "";
     if (ctype.includes("application/json")) {
       const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
-      const { mode, share, shareSlug, sharePw } = await request.json();
+      const { mode, share, shareSlug, sharePw, ttl, burnAfterReading } = await request.json();
       const { value, metadata } = await queryNote(path);
       const valid = await checkAuth(cookie, path);
       if (ADMIN_PASSWORD || !metadata.pw || valid) {
@@ -3221,15 +3465,24 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
           if (share === true) {
             slug = (shareSlug || slug).trim();
+            const ttlSec = Number(ttl) || 0;
+            const expireAt = ttlSec > 0 ? (Date.now() + ttlSec * 1000) : 0;
+            const isBurn = !!burnAfterReading;
+
             const shareData = {
               path,
               sharePw: sharePw ? await saltPw(sharePw) : (sharePw === "" ? "" : (metadata.sharePw || "")),
               slug,
+              ttl: ttlSec,
+              expireAt,
+              burnAfterReading: isBurn,
               createdAt: Date.now()
             };
-            await kvPut(`share/${slug}`, shareData);
+
+            const putOpts = ttlSec > 0 ? { expirationTtl: ttlSec } : {};
+            await kvPut(`share/${slug}`, shareData, putOpts);
             if (slug !== md5) {
-              await kvPut(`share/${md5}`, shareData);
+              await kvPut(`share/${md5}`, shareData, putOpts);
             }
             await putNote(path, value, {
               ...metadata,
@@ -3237,9 +3490,18 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               share: true,
               shareSlug: slug,
               hasSharePw: !!shareData.sharePw,
-              sharePw: shareData.sharePw
+              sharePw: shareData.sharePw,
+              shareTtl: ttlSec,
+              shareExpireAt: expireAt,
+              shareBurn: isBurn
             });
-            return returnJSON(0, { slug, hasSharePw: !!shareData.sharePw });
+            return returnJSON(0, {
+              slug,
+              hasSharePw: !!shareData.sharePw,
+              ttl: ttlSec,
+              expireAt,
+              burnAfterReading: isBurn
+            });
           } else if (share === false) {
             if (metadata.shareSlug) {
               await kvDelete(`share/${metadata.shareSlug}`);
@@ -3251,7 +3513,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               share: false,
               shareSlug: null,
               hasSharePw: false,
-              sharePw: ""
+              sharePw: "",
+              shareTtl: 0,
+              shareExpireAt: 0,
+              shareBurn: false
             });
             return returnJSON(0);
           } else if (mode !== void 0) {
@@ -3275,22 +3540,46 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
   // 12. Save Note Content (POST /:path)
   async function handleNoteSave(request, path) {
     const { value, metadata } = await queryNote(path);
+    const hasAccess = await verifyNoteAccess(request, path, metadata);
 
-    if (ADMIN_PASSWORD) {
-      const isAdmin = await checkAdminAuth(request);
-      if (!isAdmin) {
-        return returnJSON(401, "Unauthorized");
+    const ua = (request.headers.get("user-agent") || "").toLowerCase();
+    const accept = (request.headers.get("accept") || "").toLowerCase();
+    const isCurl = ua.includes("curl") || ua.includes("httpie") || ua.includes("wget");
+    const wantsRaw = isCurl || accept === "text/plain" || accept === "text/markdown";
+
+    if (!hasAccess) {
+      if (isCurl || wantsRaw) {
+        return new Response("Error: Unauthorized. Please provide password via ?pw=, -H \"x-note-pw: ...\", or -u :password\n", {
+          status: 401,
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+            "WWW-Authenticate": 'Basic realm="Notepad"'
+          }
+        });
       }
-    } else {
-      const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
-      const valid = await checkAuth(cookie, path);
-      if (metadata.pw && !valid) {
-        return returnJSON(10002, "Password auth failed! Try refreshing this page if you had just set a password.");
-      }
+      return returnJSON(401, "Unauthorized");
     }
 
-    const formData = await request.formData();
-    const content = formData.get("t");
+    let content = "";
+    const ctype = (request.headers.get("content-type") || "").toLowerCase();
+    if (ctype.includes("multipart/form-data")) {
+      try {
+        const formData = await request.formData();
+        content = formData.get("t") ?? "";
+      } catch (e) {
+        content = await request.text();
+      }
+    } else if (ctype.includes("application/x-www-form-urlencoded")) {
+      const rawBody = await request.text();
+      if (rawBody.startsWith("t=") || rawBody.includes("&t=")) {
+        const params = new URLSearchParams(rawBody);
+        content = params.get("t") ?? rawBody;
+      } else {
+        content = rawBody;
+      }
+    } else {
+      content = await request.text();
+    }
 
     // History snapshot tracking:
     // If note previously had content, and new content is different and non-empty
@@ -3346,9 +3635,22 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         ...metadata,
         updateAt: (0, import_dayjs2.default)().unix()
       });
+      if (isCurl || wantsRaw) {
+        return new Response(`OK: Saved to /${path} (${(content || "").length} bytes)\n`, {
+          status: 200,
+          headers: { "Content-Type": "text/plain; charset=utf-8" }
+        });
+      }
       return returnJSON(0);
     } catch (error) {
       console.error(error);
+    }
+
+    if (isCurl || wantsRaw) {
+      return new Response("Error: Failed to save note\n", {
+        status: 500,
+        headers: { "Content-Type": "text/plain; charset=utf-8" }
+      });
     }
     return returnJSON(10001, "Blob insert fail!");
   }
@@ -3357,6 +3659,14 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
   async function handleNoteView(request, path) {
     const lang = getI18n(request);
     const title = path;
+    const ua = (request.headers.get("user-agent") || "").toLowerCase();
+    const accept = (request.headers.get("accept") || "").toLowerCase();
+    const isCurl = ua.includes("curl") || ua.includes("httpie") || ua.includes("wget");
+    const wantsRaw = isCurl || accept === "text/plain" || accept === "text/markdown";
+
+    if (wantsRaw) {
+      return handleNoteRaw(request, path);
+    }
 
     if (ADMIN_PASSWORD) {
       const isAdmin = await checkAdminAuth(request);
@@ -3396,6 +3706,37 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       });
     }
     return returnPage("NeedPasswd", { lang, title, isPrivateMode: false });
+  }
+
+  // 14. Raw Markdown Output (/raw/:path and /:path.md)
+  async function handleNoteRaw(request, path) {
+    const { value, metadata } = await queryNote(path);
+    const hasAccess = await verifyNoteAccess(request, path, metadata);
+
+    if (!hasAccess) {
+      return new Response("Error: Unauthorized. Please provide password via ?pw=, -H \"x-note-pw: ...\", or -u :password\n", {
+        status: 401,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "WWW-Authenticate": 'Basic realm="Notepad"'
+        }
+      });
+    }
+
+    if (!value && (!metadata || Object.keys(metadata).length === 0)) {
+      return new Response("404 Not Found\n", {
+        status: 404,
+        headers: { "Content-Type": "text/plain; charset=utf-8" }
+      });
+    }
+
+    return new Response(value || "", {
+      status: 200,
+      headers: {
+        "Content-Type": "text/markdown; charset=utf-8",
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+      }
+    });
   }
 
   // 14. Image Upload & Quota Management (200MB Limit)
@@ -3827,20 +4168,51 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         const lang = getI18n(request);
         return returnPage("Page404", { lang, title: "404" });
       }
-      const rest = pathname.slice(7);
+      let rest = pathname.slice(7);
+      let isRawShare = false;
+      if (rest.endsWith(".md") && rest.length > 3) {
+        rest = rest.slice(0, -3);
+        isRawShare = true;
+      }
       if (method === "POST" && rest.endsWith("/auth")) {
         const slug = decodeURIComponent(rest.slice(0, -5));
         return handleShareAuth(request, slug);
       }
       if (method === "GET") {
         const slug = decodeURIComponent(rest);
-        return handleShareView(request, slug);
+        return handleShareView(request, slug, isRawShare);
       }
       const lang = getI18n(request);
       return returnPage("Page404", { lang, title: "404" });
     }
 
     if (pathname.length > 1) {
+      if (pathname.startsWith("/raw/")) {
+        const rest = pathname.slice(5);
+        if (rest.startsWith("share/")) {
+          const slug = decodeURIComponent(rest.slice(6));
+          return handleShareView(request, slug, true);
+        }
+        const path = decodeURIComponent(rest);
+        if (method === "POST") {
+          return handleNoteSave(request, path);
+        }
+        return handleNoteRaw(request, path);
+      }
+
+      if (pathname.endsWith(".md") && pathname.length > 3) {
+        const rest = pathname.slice(1, -3);
+        if (rest.startsWith("share/")) {
+          const slug = decodeURIComponent(rest.slice(6));
+          return handleShareView(request, slug, true);
+        }
+        const path = decodeURIComponent(rest);
+        if (method === "POST") {
+          return handleNoteSave(request, path);
+        }
+        return handleNoteRaw(request, path);
+      }
+
       if (method === "POST" && pathname.endsWith("/delete") && pathname.length > 8) {
         const path = decodeURIComponent(pathname.slice(1, -7));
         return handleNoteDelete(request, path);
