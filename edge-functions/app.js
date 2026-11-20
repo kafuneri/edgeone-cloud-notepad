@@ -582,6 +582,7 @@ const store = getStore("notepad");
             }
           }
         }
+        return new Response("Not Found", { status: 404 });
       }
     };
   }
@@ -2501,9 +2502,15 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     KV = env?.notepad_kv || globalThis?.notepad_kv || null;
 
     try {
-      return await router.handle(request);
+      const res = await router.handle(request);
+      if (!res) {
+        return new Response("Router returned empty response for: " + request.url, { status: 404 });
+      }
+      return res;
     } catch (err) {
       console.error(err);
-      return returnJSON(500, "Internal Error: " + err.message);
+      return new Response("Internal Edge Error: " + err.message + "\nStack: " + (err.stack || ""), {
+        headers: { "Content-Type": "text/plain;charset=UTF-8" }
+      });
     }
   }
