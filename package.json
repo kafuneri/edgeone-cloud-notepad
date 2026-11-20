@@ -1,0 +1,14 @@
+{
+  "name": "edgeone-cloud-notepad",
+  "version": "1.0.0",
+  "description": "Serverless Cloud Notepad on Tencent Cloud EdgeOne Pages / Makers",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kafuneri/edgeone-cloud-notepad.git"
+  },
+  "dependencies": {
+    "@edgeone/pages-blob": "^0.0.19"
+  }
+}
