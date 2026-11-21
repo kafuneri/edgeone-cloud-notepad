@@ -1455,11 +1455,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         width: 100% !important;
         height: auto !important;
         min-height: 42px !important;
-        background: rgba(255, 255, 255, 0.96) !important;
-        backdrop-filter: blur(8px) !important;
-        -webkit-backdrop-filter: blur(8px) !important;
-        border-top: 1px solid #d0d7de !important;
-        box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.04) !important;
+        background: rgba(255, 255, 255, 0.3) !important;
+        backdrop-filter: blur(14px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
+        border-top: 1px solid rgba(208, 215, 222, 0.45) !important;
+        box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.04) !important;
         padding: 6px 24px !important;
         box-sizing: border-box !important;
         z-index: 950 !important;
@@ -1494,23 +1494,47 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         gap: 12px !important;
         margin-left: auto !important;
       }
+      .footer .github-link {
+        color: #57606a !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: color 0.15s ease !important;
+      }
+      .footer .github-link:hover {
+        color: #24292f !important;
+      }
 
       /* Mobile Responsive (<= 768px) */
       @media (max-width: 768px) {
         .note-container {
-          padding: 16px 12px 110px 12px !important;
+          padding: 14px 10px 0 10px !important;
+        }
+        .stack .layer_1 .layer_2 .layer_3 {
+          min-height: calc(100vh - 35px) !important;
+          padding: 16px 14px 0 14px !important;
+          box-sizing: border-box !important;
         }
         .stack .layer_1 .layer_2 .layer_3 .contents {
-          height: calc(100vh - 165px) !important;
-          padding-bottom: 80px !important;
+          height: calc(100vh - 65px) !important;
+          padding-bottom: 95px !important;
+          box-sizing: border-box !important;
+        }
+        #preview-md, #preview-plain {
+          min-height: calc(100vh - 65px) !important;
+          padding-bottom: 105px !important;
+          box-sizing: border-box !important;
         }
         .footer {
-          padding: 6px 10px 8px 10px !important;
+          padding: 6px 12px 8px 12px !important;
           flex-direction: column !important;
           align-items: stretch !important;
           gap: 6px !important;
-          background: #ffffff !important;
-          box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06) !important;
+          background: rgba(255, 255, 255, 0.3) !important;
+          backdrop-filter: blur(16px) saturate(180%) !important;
+          -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+          border-top: 1px solid rgba(208, 215, 222, 0.45) !important;
+          box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.04) !important;
         }
         .footer .opt {
           width: 100% !important;
@@ -1537,8 +1561,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           justify-content: space-between !important;
           align-items: center !important;
           font-size: 11px !important;
+          gap: 6px !important;
         }
-        #status-word-count {
+        #status-word-count, .footer .last-modified {
           font-size: 11px !important;
         }
       }
@@ -3495,8 +3520,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       }
     }
     const newHash = genRandomStr(3);
-    const u = new URL(request.url);
-    return Response.redirect(`${u.origin}/${newHash}`, 302);
+    return new Response(null, {
+      status: 302,
+      headers: { "Location": `/${newHash}` }
+    });
   }
 
   // 2. Admin Login
