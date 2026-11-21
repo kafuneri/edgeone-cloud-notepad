@@ -630,7 +630,7 @@ const store = new Proxy({}, {
       uploadSuccess: "Image uploaded successfully!",
       uploadFail: "Image upload failed",
       imgQuota: "Images: 200MB max",
-      lastModified: "Last Modified",
+      lastModified: "Saved",
       copy: "Copy",
       emptyPH: "There are many like it, but this one is mine...",
       tipEncrypt: "This Note has been encrypted, please enter password!",
@@ -703,7 +703,7 @@ const store = new Proxy({}, {
       uploadSuccess: "图片上传成功！",
       uploadFail: "图片上传失败",
       imgQuota: "图片配额: 200MB",
-      lastModified: "上次保存",
+      lastModified: "Saved",
       copy: "复制",
       emptyPH: "看来你是第一个到这儿的人，写点什么吧...",
       tipEncrypt: "这是一篇加密笔记，你必须先输入密码！",
@@ -773,23 +773,25 @@ const store = new Proxy({}, {
         ${isEdit ? `
             <div class="opt">
                 ${!isPrivateMode ? `<button class="opt-button opt-pw">${pw ? SUPPORTED_LANG[lang].changePW : SUPPORTED_LANG[lang].setPW}</button>` : ""}
-                ${SWITCHER("Markdown", mode === "md", "opt-mode")}
-                <button class="opt-button opt-share-trigger" style="margin-left:6px;">${SUPPORTED_LANG[lang].share}</button>
+                <button id="opt-mode-btn" type="button" class="opt-button ${mode === 'md' ? 'opt-mode-active' : 'opt-mode-inactive'}" title="${mode === 'md' ? 'Markdown 模式已开启 (点击切换纯文本)' : '纯文本模式 (点击开启 Markdown)'}">Markdown</button>
+                <button class="opt-button opt-share-trigger">${SUPPORTED_LANG[lang].share}</button>
                 ${isPrivateMode ? `
-                <button id="opt-img-btn" class="opt-button" style="margin-left:6px;" title="${SUPPORTED_LANG[lang].imgMgrTitle} (200MB)">${SUPPORTED_LANG[lang].imgMgr}</button>
-                <button id="opt-hist-btn" class="opt-button" style="margin-left:6px;" title="${SUPPORTED_LANG[lang].historyTitle}">${SUPPORTED_LANG[lang].history}</button>
+                <button id="opt-img-btn" class="opt-button" title="${SUPPORTED_LANG[lang].imgMgrTitle} (200MB)">${SUPPORTED_LANG[lang].imgMgr}</button>
+                <button id="opt-hist-btn" class="opt-button" title="${SUPPORTED_LANG[lang].historyTitle}">${SUPPORTED_LANG[lang].history}</button>
                 <input type="file" id="img-upload-input" accept="image/*" multiple style="display:none;" />
                 ` : ""}
-                <a href="${path ? ('/raw/' + encodeURI(path)) : '#'}" target="_blank" class="opt-button" style="text-decoration:none; margin-left:6px; display:inline-flex; align-items:center;" title="${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}">${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}</a>
+                <a href="${path ? ('/raw/' + encodeURI(path)) : '#'}" target="_blank" class="opt-button" style="text-decoration:none; display:inline-flex; align-items:center;" title="${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}">${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}</a>
             </div>
             ` : ""}
-        <div style="display:flex; align-items:center; gap:12px; margin-left:auto;">
+        <div class="status-row">
             ${!isEdit && path ? `<a href="/raw/${encodeURI(path)}" target="_blank" class="opt-button" style="text-decoration:none; font-size:12px; padding:2px 8px; display:inline-flex; align-items:center;" title="${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}">${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}</a>` : ""}
             <span id="status-word-count" style="font-size:12px; color:#57606a; white-space:nowrap; user-select:none;">${SUPPORTED_LANG[lang].wordsCount}: 0 · ${SUPPORTED_LANG[lang].charsCount}: 0 · 0 ${SUPPORTED_LANG[lang].linesCount}</span>
-            <a class="github-link" title="Github" target="_blank" href="https://github.com/kafuneri/edgeone-cloud-notepad" rel="noreferrer">
-                <svg viewBox="64 64 896 896" focusable="false" data-icon="github" width="1em" height="1em" fill="currentColor" aria-hidden="true"><path d="M511.6 76.3C264.3 76.2 64 276.4 64 523.5 64 718.9 189.3 885 363.8 946c23.5 5.9 19.9-10.8 19.9-22.2v-77.5c-135.7 15.9-141.2-73.9-150.3-88.9C215 726 171.5 718 184.5 703c30.9-15.9 62.4 4 98.9 57.9 26.4 39.1 77.9 32.5 104 26 5.7-23.5 17.9-44.5 34.7-60.8-140.6-25.2-199.2-111-199.2-213 0-49.5 16.3-95 48.3-131.7-20.4-60.5 1.9-112.3 4.9-120 58.1-5.2 118.5 41.6 123.2 45.3 33-8.9 70.7-13.6 112.9-13.6 42.4 0 80.2 4.9 113.5 13.9 11.3-8.6 67.3-48.8 121.3-43.9 2.9 7.7 24.7 58.3 5.5 118 32.4 36.8 48.9 82.7 48.9 132.3 0 102.2-59 188.1-200 212.9a127.5 127.5 0 0138.1 91v112.5c.8 9 0 17.9 15 17.9 177.1-59.7 304.6-227 304.6-424.1 0-247.2-200.4-447.3-447.5-447.3z"></path></svg>
-            </a>
-            ${updateAt ? `<span class="last-modified">${SUPPORTED_LANG[lang].lastModified} ${import_dayjs.default.unix(updateAt).fromNow()}</span>` : ""}
+            <div style="display:flex; align-items:center; gap:8px; margin-left:auto;">
+                <a class="github-link" title="Github" target="_blank" href="https://github.com/kafuneri/edgeone-cloud-notepad" rel="noreferrer">
+                    <svg viewBox="64 64 896 896" focusable="false" data-icon="github" width="1em" height="1em" fill="currentColor" aria-hidden="true"><path d="M511.6 76.3C264.3 76.2 64 276.4 64 523.5 64 718.9 189.3 885 363.8 946c23.5 5.9 19.9-10.8 19.9-22.2v-77.5c-135.7 15.9-141.2-73.9-150.3-88.9C215 726 171.5 718 184.5 703c30.9-15.9 62.4 4 98.9 57.9 26.4 39.1 77.9 32.5 104 26 5.7-23.5 17.9-44.5 34.7-60.8-140.6-25.2-199.2-111-199.2-213 0-49.5 16.3-95 48.3-131.7-20.4-60.5 1.9-112.3 4.9-120 58.1-5.2 118.5 41.6 123.2 45.3 33-8.9 70.7-13.6 112.9-13.6 42.4 0 80.2 4.9 113.5 13.9 11.3-8.6 67.3-48.8 121.3-43.9 2.9 7.7 24.7 58.3 5.5 118 32.4 36.8 48.9 82.7 48.9 132.3 0 102.2-59 188.1-200 212.9a127.5 127.5 0 0138.1 91v112.5c.8 9 0 17.9 15 17.9 177.1-59.7 304.6-227 304.6-424.1 0-247.2-200.4-447.3-447.5-447.3z"></path></svg>
+                </a>
+                ${updateAt ? `<span class="last-modified" style="font-size:12px; color:#57606a; white-space:nowrap;">${SUPPORTED_LANG[lang].lastModified} ${import_dayjs.default.unix(updateAt).fromNow()}</span>` : ""}
+            </div>
         </div>
     </div>
 `;
@@ -1403,17 +1405,142 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         z-index: 1002 !important;
         overflow: hidden !important;
       }
+      /* Markdown button active / inactive states */
+      .opt-mode-active {
+        background: #3a86ff !important;
+        color: #ffffff !important;
+        border: 1px solid #3a86ff !important;
+        font-weight: 500 !important;
+      }
+      .opt-mode-active:hover {
+        background: #2a75ef !important;
+        border-color: #2a75ef !important;
+      }
+      .opt-mode-inactive {
+        background: #f6f8fa !important;
+        color: #57606a !important;
+        border: 1px solid #d0d7de !important;
+        font-weight: normal !important;
+      }
+      .opt-mode-inactive:hover {
+        background: #eaeef2 !important;
+        color: #24292f !important;
+        border-color: #8c959f !important;
+      }
+
+      /* Note Container & Content clearance from bottom footer */
+      .note-container {
+        padding-bottom: 85px !important;
+        box-sizing: border-box !important;
+      }
+      .stack .layer_1 .layer_2 .layer_3 .contents {
+        padding-bottom: 70px !important;
+        box-sizing: border-box !important;
+      }
+      #preview-md, #preview-plain {
+        padding-bottom: 80px !important;
+        box-sizing: border-box !important;
+      }
+      .vditor-reset {
+        padding-bottom: 80px !important;
+        box-sizing: border-box !important;
+      }
+
+      /* Base Footer (Desktop default) */
       .footer {
-        flex-wrap: wrap !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
         height: auto !important;
-        min-height: 28px !important;
-        gap: 6px !important;
+        min-height: 42px !important;
+        background: rgba(255, 255, 255, 0.96) !important;
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
+        border-top: 1px solid #d0d7de !important;
+        box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.04) !important;
+        padding: 6px 24px !important;
+        box-sizing: border-box !important;
+        z-index: 950 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 12px !important;
       }
       .footer .opt {
         display: flex !important;
-        flex-wrap: wrap !important;
         align-items: center !important;
         gap: 6px !important;
+        flex-shrink: 0 !important;
+      }
+      .footer .opt .opt-button {
+        padding: 4px 10px !important;
+        font-size: 13px !important;
+        border-radius: 4px !important;
+        white-space: nowrap !important;
+        cursor: pointer !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+        line-height: 1.4 !important;
+        text-decoration: none !important;
+        transition: all 0.15s ease !important;
+      }
+      .footer .status-row {
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        margin-left: auto !important;
+      }
+
+      /* Mobile Responsive (<= 768px) */
+      @media (max-width: 768px) {
+        .note-container {
+          padding: 16px 12px 110px 12px !important;
+        }
+        .stack .layer_1 .layer_2 .layer_3 .contents {
+          height: calc(100vh - 165px) !important;
+          padding-bottom: 80px !important;
+        }
+        .footer {
+          padding: 6px 10px 8px 10px !important;
+          flex-direction: column !important;
+          align-items: stretch !important;
+          gap: 6px !important;
+          background: #ffffff !important;
+          box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06) !important;
+        }
+        .footer .opt {
+          width: 100% !important;
+          display: flex !important;
+          flex-wrap: nowrap !important;
+          overflow-x: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+          gap: 6px !important;
+          padding-bottom: 2px !important;
+          scrollbar-width: none !important;
+        }
+        .footer .opt::-webkit-scrollbar {
+          display: none !important;
+        }
+        .footer .opt .opt-button {
+          font-size: 12px !important;
+          padding: 4px 9px !important;
+          flex-shrink: 0 !important;
+        }
+        .footer .status-row {
+          width: 100% !important;
+          margin-left: 0 !important;
+          display: flex !important;
+          justify-content: space-between !important;
+          align-items: center !important;
+          font-size: 11px !important;
+        }
+        #status-word-count {
+          font-size: 11px !important;
+        }
       }
       /* TOC Floating Button & Panel */
       .toc-toggle-btn {
@@ -1884,6 +2011,34 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             } finally {
               exportZipBtn.dataset.busy = "0";
               exportZipBtn.style.opacity = "1";
+            }
+          };
+        }
+
+        // --- 1.2 Markdown Mode Button Click Handler ---
+        const modeBtn = document.getElementById("opt-mode-btn");
+        if (modeBtn) {
+          modeBtn.onclick = async function() {
+            if (modeBtn.dataset.busy === "1") return;
+            modeBtn.dataset.busy = "1";
+            const isMd = modeBtn.classList.contains("opt-mode-active");
+            const targetMode = isMd ? "plain" : "md";
+            try {
+              const res = await fetch(window.location.pathname + "/setting", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ mode: targetMode })
+              });
+              const data = await res.json();
+              if (data.err === 0) {
+                window.location.reload();
+              } else {
+                alert(data.msg || "切换模式失败");
+                modeBtn.dataset.busy = "0";
+              }
+            } catch (err) {
+              alert("切换模式异常: " + err.message);
+              modeBtn.dataset.busy = "0";
             }
           };
         }
