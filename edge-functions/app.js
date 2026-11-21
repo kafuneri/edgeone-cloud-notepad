@@ -14,8 +14,6 @@ const store = new Proxy({}, {
     return typeof val === "function" ? val.bind(s) : val;
   }
 });
-  // 新增：用于记录错误次数的内存黑名单
-  const ipFailMap = new Map(); 
   var __create = Object.create;
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -3410,11 +3408,152 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     } catch (e) {}
   }
 
+  function formatNoteIndexItem(path, metadata) {
+    return {
+      path,
+      updateAt: metadata?.updateAt || 0,
+      mode: metadata?.mode || "plain",
+      share: !!metadata?.share,
+      shareSlug: metadata?.shareSlug || ""
+    };
+  }
+
+  async function rebuildNotesIndex() {
+    const { blobs } = await store.list({ prefix: "notes/", consistency: "strong" });
+    const notes = await Promise.all((blobs || []).map(async (blob) => {
+      const notePath = blob.key.slice("notes/".length);
+      let metadata = {};
+      try {
+        const data = await store.get(blob.key, { type: "json", consistency: "strong" });
+        if (data && data.metadata) metadata = data.metadata;
+      } catch (err) {}
+      return formatNoteIndexItem(notePath, metadata);
+    }));
+    notes.sort((a, b) => (b.updateAt || 0) - (a.updateAt || 0));
+    await store.setJSON("stat/notes_index", notes);
+    return notes;
+  }
+
+  async function getNotesIndex(forceRefresh = false) {
+    if (!forceRefresh) {
+      try {
+        const cached = await store.get("stat/notes_index", { type: "json", consistency: "strong" });
+        if (Array.isArray(cached)) return cached;
+      } catch (e) {
+        console.warn("getNotesIndex read failed, rebuilding:", e.message);
+      }
+    }
+    return await rebuildNotesIndex();
+  }
+
+  async function upsertNoteIndex(path, metadata) {
+    try {
+      const list = await store.get("stat/notes_index", { type: "json", consistency: "strong" });
+      if (!Array.isArray(list)) {
+        await rebuildNotesIndex();
+        return;
+      }
+      const next = list.filter((item) => item && item.path !== path);
+      next.unshift(formatNoteIndexItem(path, metadata));
+      next.sort((a, b) => (b.updateAt || 0) - (a.updateAt || 0));
+      await store.setJSON("stat/notes_index", next);
+    } catch (e) {
+      console.warn("upsertNoteIndex error:", e);
+    }
+  }
+
+  async function removeNoteIndex(path) {
+    try {
+      const list = await store.get("stat/notes_index", { type: "json", consistency: "strong" });
+      if (!Array.isArray(list)) return;
+      const next = list.filter((item) => item && item.path !== path);
+      await store.setJSON("stat/notes_index", next);
+    } catch (e) {
+      console.warn("removeNoteIndex error:", e);
+    }
+  }
+
+  async function deleteShareKeys(slug, path, storedSlug) {
+    const keys = new Set();
+    if (slug) keys.add(slug);
+    if (storedSlug) keys.add(storedSlug);
+    if (path) {
+      const md5 = await MD5(path);
+      if (md5) keys.add(md5);
+    }
+    for (const k of keys) {
+      await kvDelete(`share/${k}`);
+    }
+  }
+
+  function getClientIp(request) {
+    return request.headers.get("eo-client-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown_ip";
+  }
+
+  async function checkAuthRateLimit(failsKey, lang) {
+    const now = Date.now();
+    let failRecord = null;
+    try {
+      failRecord = await kvGet(failsKey, "json");
+    } catch (e) {}
+
+    let fails = 0;
+    let unlockAt = 0;
+    if (failRecord && failRecord.expireAt && now < failRecord.expireAt) {
+      fails = parseInt(failRecord.count || "0", 10) || 0;
+      unlockAt = parseInt(failRecord.unlockAt || "0", 10) || 0;
+    }
+
+    if (unlockAt > now) {
+      const waitSeconds = Math.ceil((unlockAt - now) / 1000);
+      const msg = lang === "zh" ? `密码错误次数过多，请等待 ${waitSeconds} 秒后再试` : `Too many failed attempts. Please wait ${waitSeconds}s before retrying.`;
+      return {
+        blocked: true,
+        fails,
+        response: new Response(JSON.stringify({ err: 429, msg, retryAfter: waitSeconds }), {
+          status: 429,
+          headers: { "Content-Type": "application/json;charset=UTF-8" }
+        })
+      };
+    }
+    return { blocked: false, fails };
+  }
+
+  async function recordAuthFailure(failsKey, currentFails, lang, errCode, errMsg, putOptions = {}) {
+    const now = Date.now();
+    const fails = currentFails + 1;
+    let cooldown = 0;
+    if (fails === 4) cooldown = 5;
+    else if (fails === 5) cooldown = 30;
+    else if (fails === 6) cooldown = 120;
+    else if (fails >= 7) cooldown = 900;
+
+    const newUnlockAt = cooldown > 0 ? now + (cooldown * 1000) : 0;
+    try {
+      await kvPut(failsKey, {
+        count: fails,
+        unlockAt: newUnlockAt,
+        expireAt: now + 1800 * 1000
+      }, putOptions);
+    } catch (e) {}
+
+    if (cooldown > 0) {
+      const msg = lang === "zh" ? `密码错误！已连续输错 ${fails} 次，请等待 ${cooldown} 秒后再试` : `Password auth failed! Too many attempts (${fails}), please wait ${cooldown}s before retrying.`;
+      return new Response(JSON.stringify({ err: 429, msg, retryAfter: cooldown }), {
+        status: 429,
+        headers: { "Content-Type": "application/json;charset=UTF-8" }
+      });
+    }
+
+    return returnJSON(errCode, errMsg);
+  }
+
   async function putNote(key, value, metadata) {
     await store.setJSON(`notes/${key}`, {
       value: value || "",
       metadata: metadata || {}
     });
+    await upsertNoteIndex(key, metadata);
   }
   function getI18n(request) {
     const DEFAULT_LANG = "en";
@@ -3531,11 +3670,24 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     if (!ADMIN_PASSWORD) {
       return returnJSON(400, "Private mode is not active.");
     }
+    const lang = getI18n(request);
+    const ip = getClientIp(request);
+    const failsKey = `fails/admin_${encodeURIComponent(ip)}`;
+
+    const rateCheck = await checkAuthRateLimit(failsKey, lang);
+    if (rateCheck.blocked) {
+      return rateCheck.response;
+    }
+
     try {
       const { password } = await request.json();
       if (password !== ADMIN_PASSWORD) {
-        return returnJSON(401, "管理员密码错误");
+        const errMsg = lang === "zh" ? "管理员密码错误" : "Invalid admin password";
+        return await recordAuthFailure(failsKey, rateCheck.fails, lang, 401, errMsg, { expirationTtl: 1800 });
       }
+      try {
+        await kvDelete(failsKey);
+      } catch (e) {}
       const token = await import_cloudflare_worker_jwt.default.sign({
         role: "admin",
         exp: Math.floor(Date.now() / 1000) + (30 * 24 * 3600)
@@ -3578,24 +3730,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
 
     try {
-      const { blobs } = await store.list({ prefix: "notes/", consistency: "strong" });
-      const notes = await Promise.all((blobs || []).map(async (blob) => {
-        const notePath = blob.key.slice("notes/".length);
-        let metadata = {};
-        try {
-          const data = await store.get(blob.key, { type: "json", consistency: "strong" });
-          if (data && data.metadata) metadata = data.metadata;
-        } catch (err) {}
-        return {
-          path: notePath,
-          updateAt: metadata?.updateAt || 0,
-          mode: metadata?.mode || "plain",
-          share: !!metadata?.share,
-          shareSlug: metadata?.shareSlug || ""
-        };
-      }));
-
-      notes.sort((a, b) => (b.updateAt || 0) - (a.updateAt || 0));
+      const url = new URL(request.url);
+      const forceRefresh = url.searchParams.get("refresh") === "1" || url.searchParams.get("sync") === "1";
+      const notes = await getNotesIndex(forceRefresh);
       return returnJSON(0, notes);
     } catch (err) {
       return returnJSON(500, err.message);
@@ -3635,23 +3772,14 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       return new Response("Bad Request", { status: 400 });
     }
 
-    const { blobs } = await store.list({ prefix: "notes/", consistency: "strong" });
-    const noteList = await Promise.all((blobs || []).map(async (blob) => {
-      const notePath = blob.key.slice("notes/".length);
-      let metadata = {};
-      try {
-        const data = await store.get(blob.key, { type: "json", consistency: "strong" });
-        if (data && data.metadata) metadata = data.metadata;
-      } catch (err) {}
-      return { name: notePath, metadata };
-    }));
-
-    noteList.sort((a, b) => (b.metadata?.updateAt || 0) - (a.metadata?.updateAt || 0));
+    const url = new URL(request.url);
+    const forceRefresh = url.searchParams.get("refresh") === "1" || url.searchParams.get("sync") === "1";
+    const noteList = await getNotesIndex(forceRefresh);
 
     const rows = noteList.map((item) => `
       <tr>
-        <td><a href="/${encodeURI(item.name)}">${item.name}</a></td>
-        <td>${item.metadata?.updateAt ? (0, import_dayjs.default)(item.metadata.updateAt * 1e3).format("YYYY-MM-DD HH:mm:ss") : "-"}</td>
+        <td><a href="/${encodeURI(item.path)}">${item.path}</a></td>
+        <td>${item.updateAt ? (0, import_dayjs.default)(item.updateAt * 1e3).format("YYYY-MM-DD HH:mm:ss") : "-"}</td>
       </tr>
     `).join("");
 
@@ -3711,14 +3839,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
 
     const shareObj = typeof rawShare === "string" ? { path: rawShare, sharePw: "" } : rawShare;
-    const { path, sharePw, expireAt, burnAfterReading } = shareObj;
+    const { path, sharePw, expireAt, burnAfterReading, slug: storedSlug } = shareObj;
 
     // Check expiration TTL
     const now = Date.now();
     if (expireAt && now > expireAt) {
-      await kvDelete(`share/${slug}`);
-      const md5 = await MD5(path);
-      await kvDelete(`share/${md5}`);
+      await deleteShareKeys(slug, path, storedSlug);
       if (wantsRaw) {
         return new Response("404 Share Expired\n", {
           status: 404,
@@ -3788,9 +3914,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
     // Burn After Reading: destroy immediately upon first authorized access!
     if (burnAfterReading) {
-      await kvDelete(`share/${slug}`);
-      const md5 = await MD5(path);
-      await kvDelete(`share/${md5}`);
+      await deleteShareKeys(slug, path, storedSlug);
       try {
         await putNote(path, value, {
           ...metadata,
@@ -3831,9 +3955,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
   // 7. Share Password Verification (/share/:slug/auth)
   async function handleShareAuth(request, slug) {
     const lang = getI18n(request);
-    const ip = request.headers.get("eo-client-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown_ip";
+    const ip = getClientIp(request);
     const failsKey = `fails/share_${encodeURIComponent(ip)}_${encodeURIComponent(slug)}`;
-    const now = Date.now();
 
     const rawShare = await kvGet(`share/${slug}`, "json");
     if (!rawShare) {
@@ -3841,32 +3964,14 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
     const shareObj = typeof rawShare === "string" ? { path: rawShare, sharePw: "" } : rawShare;
     if (shareObj.expireAt && Date.now() > shareObj.expireAt) {
-      await kvDelete(`share/${slug}`);
-      const md5 = await MD5(shareObj.path);
-      await kvDelete(`share/${md5}`);
+      await deleteShareKeys(slug, shareObj.path, shareObj.slug);
       return returnJSON(404, "Share expired");
     }
     const { sharePw } = shareObj;
 
-    let failRecord = null;
-    try {
-      failRecord = await kvGet(failsKey, "json");
-    } catch (e) {}
-
-    let fails = 0;
-    let unlockAt = 0;
-    if (failRecord && failRecord.expireAt && now < failRecord.expireAt) {
-      fails = parseInt(failRecord.count || "0");
-      unlockAt = parseInt(failRecord.unlockAt || "0");
-    }
-
-    if (unlockAt > now) {
-      const waitSeconds = Math.ceil((unlockAt - now) / 1000);
-      const msg = lang === "zh" ? `密码错误次数过多，请等待 ${waitSeconds} 秒后再试` : `Too many failed attempts. Please wait ${waitSeconds}s before retrying.`;
-      return new Response(JSON.stringify({ err: 429, msg, retryAfter: waitSeconds }), {
-        status: 429,
-        headers: { "Content-Type": "application/json;charset=UTF-8" }
-      });
+    const rateCheck = await checkAuthRateLimit(failsKey, lang);
+    if (rateCheck.blocked) {
+      return rateCheck.response;
     }
 
     let isPasswordCorrect = false;
@@ -3895,32 +4000,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       });
     }
 
-    fails++;
-    let cooldown = 0;
-    if (fails === 4) cooldown = 5;
-    else if (fails === 5) cooldown = 30;
-    else if (fails === 6) cooldown = 120;
-    else if (fails >= 7) cooldown = 900;
-
-    const newUnlockAt = cooldown > 0 ? now + (cooldown * 1000) : 0;
-    try {
-      await kvPut(failsKey, {
-        count: fails,
-        unlockAt: newUnlockAt,
-        expireAt: now + 1800 * 1000
-      });
-    } catch (e) {}
-
-    if (cooldown > 0) {
-      const msg = lang === "zh" ? `密码错误！已连续输错 ${fails} 次，请等待 ${cooldown} 秒后再试` : `Password auth failed! Too many attempts (${fails}), please wait ${cooldown}s before retrying.`;
-      return new Response(JSON.stringify({ err: 429, msg, retryAfter: cooldown }), {
-        status: 429,
-        headers: { "Content-Type": "application/json;charset=UTF-8" }
-      });
-    }
-
     const errMsg = lang === "zh" ? "提取码错误！" : "Access code incorrect!";
-    return returnJSON(10002, errMsg);
+    return await recordAuthFailure(failsKey, rateCheck.fails, lang, 10002, errMsg, { expirationTtl: 1800 });
   }
 
   // 8. Note Delete
@@ -3942,13 +4023,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
     try {
       await store.delete(`notes/${path}`);
-      if (metadata.shareSlug) {
-        await kvDelete(`share/${metadata.shareSlug}`);
-      }
-      const md5 = await MD5(path);
-      await kvDelete(`share/${md5}`);
+      await removeNoteIndex(path);
+      await deleteShareKeys(metadata.shareSlug, path, null);
 
-      const ip = request.headers.get("eo-client-ip") || "unknown_ip";
+      const ip = getClientIp(request);
       await kvDelete(`fails/${encodeURIComponent(ip)}_${encodeURIComponent(path)}`);
 
       // Clean up history snapshots and index
@@ -3974,29 +4052,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
   // 9. Note Auth (/:path/auth)
   async function handleNoteAuth(request, path) {
     const lang = getI18n(request);
-    const ip = request.headers.get("eo-client-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown_ip";
+    const ip = getClientIp(request);
     const failsKey = `fails/${encodeURIComponent(ip)}_${encodeURIComponent(path)}`;
-    const now = Date.now();
 
-    let failRecord = null;
-    try {
-      failRecord = await kvGet(failsKey, "json");
-    } catch (e) {}
-
-    let fails = 0;
-    let unlockAt = 0;
-    if (failRecord && failRecord.expireAt && now < failRecord.expireAt) {
-      fails = parseInt(failRecord.count || "0");
-      unlockAt = parseInt(failRecord.unlockAt || "0");
-    }
-
-    if (unlockAt > now) {
-      const waitSeconds = Math.ceil((unlockAt - now) / 1000);
-      const msg = lang === "zh" ? `密码错误次数过多，请等待 ${waitSeconds} 秒后再试` : `Too many failed attempts. Please wait ${waitSeconds}s before retrying.`;
-      return new Response(JSON.stringify({ err: 429, msg, retryAfter: waitSeconds }), {
-        status: 429,
-        headers: { "Content-Type": "application/json;charset=UTF-8" }
-      });
+    const rateCheck = await checkAuthRateLimit(failsKey, lang);
+    if (rateCheck.blocked) {
+      return rateCheck.response;
     }
 
     let isPasswordCorrect = false;
@@ -4026,32 +4087,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       });
     }
 
-    fails++;
-    let cooldown = 0;
-    if (fails === 4) cooldown = 5;
-    else if (fails === 5) cooldown = 30;
-    else if (fails === 6) cooldown = 120;
-    else if (fails >= 7) cooldown = 900;
-
-    const newUnlockAt = cooldown > 0 ? now + (cooldown * 1000) : 0;
-    try {
-      await kvPut(failsKey, {
-        count: fails,
-        unlockAt: newUnlockAt,
-        expireAt: now + 1800 * 1000
-      });
-    } catch (e) {}
-
-    if (cooldown > 0) {
-      const msg = lang === "zh" ? `密码错误！已连续输错 ${fails} 次，请等待 ${cooldown} 秒后再试` : `Password auth failed! Too many attempts (${fails}), please wait ${cooldown}s before retrying.`;
-      return new Response(JSON.stringify({ err: 429, msg, retryAfter: cooldown }), {
-        status: 429,
-        headers: { "Content-Type": "application/json;charset=UTF-8" }
-      });
-    }
-
     const errMsg = lang === "zh" ? "密码错误！" : "Password auth failed!";
-    return returnJSON(10002, errMsg);
+    return await recordAuthFailure(failsKey, rateCheck.fails, lang, 10002, errMsg, { expirationTtl: 1800 });
   }
 
   // 10. Note Password Setting (/:path/pw)
@@ -4123,6 +4160,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               createdAt: Date.now()
             };
 
+            if (metadata.shareSlug && metadata.shareSlug !== slug && metadata.shareSlug !== md5) {
+              await kvDelete(`share/${metadata.shareSlug}`);
+            }
+
             const putOpts = ttlSec > 0 ? { expirationTtl: ttlSec } : {};
             await kvPut(`share/${slug}`, shareData, putOpts);
             if (slug !== md5) {
@@ -4147,10 +4188,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               burnAfterReading: isBurn
             });
           } else if (share === false) {
-            if (metadata.shareSlug) {
-              await kvDelete(`share/${metadata.shareSlug}`);
-            }
-            await kvDelete(`share/${md5}`);
+            await deleteShareKeys(metadata.shareSlug, path, null);
             await putNote(path, value, {
               ...metadata,
               ...mode !== void 0 && { mode },
@@ -4458,7 +4496,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       if (isNaN(currentUsage) || currentUsage < 0) currentUsage = 0;
 
       // Check if image already exists (deduplication)
-      const existing = await store.get(`images/${filename}`, { type: "arrayBuffer", consistency: "strong" });
+      const existing = await store.getMetadata(`images/${filename}`, { consistency: "strong" });
       if (!existing) {
         if (currentUsage + fileBuffer.byteLength > MAX_QUOTA) {
           const usedMB = (currentUsage / (1024 * 1024)).toFixed(1);
@@ -4517,7 +4555,15 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     const ctype = mimeTypes[ext] || "image/webp";
 
     try {
-      const buf = await store.get(`images/${filename}`, { type: "arrayBuffer", consistency: "strong" });
+      let buf = null;
+      try {
+        buf = await store.get(`images/${filename}`, { type: "arrayBuffer" });
+      } catch (eventualErr) {
+        console.warn("handleImageGet eventual read failed, falling back to strong:", eventualErr?.message || eventualErr);
+      }
+      if (!buf) {
+        buf = await store.get(`images/${filename}`, { type: "arrayBuffer", consistency: "strong" });
+      }
       if (!buf) {
         return new Response("Image Not Found", { status: 404 });
       }
@@ -4529,7 +4575,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         }
       });
     } catch (err) {
-      console.error("handleImageGet error:", err);
+      console.error("handleImageGet error:", err?.message || err);
       return new Response("Failed to fetch image", { status: 500 });
     }
   }
@@ -4569,8 +4615,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         if (!existingFnames.has(fname)) {
           let size = 0;
           try {
-            const buf = await store.get(b.key, { type: "arrayBuffer", consistency: "strong" });
-            if (buf) size = buf.byteLength;
+            const meta = await store.getMetadata(b.key, { consistency: "strong" });
+            if (meta && meta.headers && meta.headers["content-length"]) {
+              size = parseInt(meta.headers["content-length"], 10) || 0;
+            }
           } catch(e) {}
           list.push({
             filename: fname,
@@ -4606,6 +4654,14 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
   }
 
   async function handleQuota(request) {
+    if (ADMIN_PASSWORD) {
+      const isAdmin = await checkAdminAuth(request);
+      if (!isAdmin) {
+        return returnJSON(401, "Unauthorized");
+      }
+    } else {
+      return returnJSON(403, "Quota view is restricted to private admin mode.");
+    }
     const MAX_QUOTA = 200 * 1024 * 1024;
     const usageStr = await kvGet("stat/images_usage_bytes");
     let currentUsage = parseInt(usageStr || "0", 10);
@@ -4633,9 +4689,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       return returnJSON(400, "Invalid image name");
     }
     try {
-      const buf = await store.get(`images/${filename}`, { type: "arrayBuffer", consistency: "strong" });
-      if (buf) {
-        const size = buf.byteLength;
+      const meta = await store.getMetadata(`images/${filename}`, { consistency: "strong" });
+      if (meta) {
+        const size = parseInt(meta.headers?.["content-length"] || "0", 10) || 0;
         await store.delete(`images/${filename}`);
         const usageStr = await kvGet("stat/images_usage_bytes");
         let currentUsage = Math.max(0, parseInt(usageStr || "0", 10) - size);
