@@ -3768,7 +3768,13 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       updateAt: metadata?.updateAt || 0,
       mode: metadata?.mode || "plain",
       share: !!metadata?.share,
-      shareSlug: metadata?.shareSlug || ""
+      shareSlug: metadata?.shareSlug || "",
+      hasSharePw: !!metadata?.hasSharePw,
+      sharePwText: metadata?.sharePwText || "",
+      shareTtl: metadata?.shareTtl || 0,
+      shareExpireAt: metadata?.shareExpireAt || 0,
+      shareBurn: !!metadata?.shareBurn,
+      rawPublic: !!metadata?.rawPublic
     };
   }
 
@@ -3940,7 +3946,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
     // 1. Query parameter
     const url = new URL(request.url);
-    const queryPw = url.searchParams.get("pw") || url.searchParams.get("password");
+    const queryPw = url.searchParams.get("pw");
     if (queryPw && queryPw === ADMIN_PASSWORD) return true;
 
     // 2. Custom header
@@ -3985,7 +3991,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     if (!metadata || !metadata.pw) return true;
 
     const url = new URL(request.url);
-    const queryPw = url.searchParams.get("pw") || url.searchParams.get("password");
+    const queryPw = url.searchParams.get("pw");
     if (queryPw) {
       const hashed = await saltPw(queryPw);
       if (hashed === metadata.pw) return true;
@@ -4104,7 +4110,34 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     try {
       const url = new URL(request.url);
       const forceRefresh = url.searchParams.get("refresh") === "1" || url.searchParams.get("sync") === "1";
-      const notes = await getNotesIndex(forceRefresh);
+      let notes = await getNotesIndex(forceRefresh);
+      if (!forceRefresh && Array.isArray(notes) && notes.some((n) => n && typeof n.rawPublic !== "boolean")) {
+        notes = await rebuildNotesIndex();
+      }
+      return returnJSON(0, notes);
+    } catch (err) {
+      return returnJSON(500, err.message);
+    }
+  }
+
+  // 4b. Shares & Raw Public Status List (/api/shares)
+  async function handleShares(request) {
+    if (ADMIN_PASSWORD) {
+      const isAdmin = await checkAdminAuth(request);
+      if (!isAdmin) {
+        return returnJSON(401, "Unauthorized");
+      }
+    } else {
+      return returnJSON(403, "Share management is restricted to private vault mode.");
+    }
+
+    try {
+      const url = new URL(request.url);
+      const forceRefresh = url.searchParams.get("refresh") === "1" || url.searchParams.get("sync") === "1";
+      let notes = await getNotesIndex(forceRefresh);
+      if (!forceRefresh && Array.isArray(notes) && notes.some((n) => n && typeof n.rawPublic !== "boolean")) {
+        notes = await rebuildNotesIndex();
+      }
       return returnJSON(0, notes);
     } catch (err) {
       return returnJSON(500, err.message);
@@ -4228,7 +4261,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
     if (sharePw) {
       const url = new URL(request.url);
-      const queryPw = url.searchParams.get("pw") || url.searchParams.get("password");
+      const queryPw = url.searchParams.get("pw");
       let pwMatched = false;
       if (queryPw) {
         const hashed = await saltPw(queryPw);
@@ -4514,19 +4547,48 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     const ctype = request.headers.get("content-type") || request.headers.get("Content-Type") || "";
     if (ctype.includes("application/json")) {
       const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
-      const { mode, share, shareSlug, sharePw, ttl, burnAfterReading } = await request.json();
+      const { mode, share, shareSlug, sharePw, ttl, burnAfterReading, rawPublic } = await request.json();
       const { value, metadata } = await queryNote(path);
       const valid = await checkAuth(cookie, path);
       if (ADMIN_PASSWORD || !metadata.pw || valid) {
         try {
           const md5 = await MD5(path);
           let slug = metadata.shareSlug || md5;
+          const baseMeta = {
+            ...metadata,
+            ...mode !== void 0 && { mode },
+            ...typeof rawPublic === "boolean" && { rawPublic }
+          };
 
           if (share === true) {
-            slug = (shareSlug || slug).trim();
+            const lang = getI18n(request);
+            slug = (shareSlug || slug).trim().replace(/^\/+|\/+$/g, "");
+            if (!slug) slug = md5;
+            if (slug.includes("/")) {
+              return returnJSON(400, lang === "zh" ? "分享路径不能包含 /" : "Share slug cannot contain '/'");
+            }
+
+            const existingShare = await kvGet(`share/${slug}`, "json");
+            if (existingShare) {
+              const existingObj = typeof existingShare === "string" ? { path: existingShare } : existingShare;
+              const existingExpired = !!(existingObj.expireAt && Date.now() > existingObj.expireAt);
+              if (!existingExpired && existingObj.path && existingObj.path !== path) {
+                const otherNote = await queryNote(existingObj.path);
+                if (otherNote && otherNote.metadata && otherNote.metadata.share && otherNote.metadata.shareSlug === slug) {
+                  return returnJSON(
+                    409,
+                    lang === "zh"
+                      ? `分享路径 "${slug}" 已被笔记 "${existingObj.path}" 占用，请更换其他路径`
+                      : `Share slug "${slug}" is already used by "${existingObj.path}"`
+                  );
+                }
+              }
+            }
+
             const ttlSec = Number(ttl) || 0;
             const expireAt = ttlSec > 0 ? (Date.now() + ttlSec * 1000) : 0;
             const isBurn = !!burnAfterReading;
+            const nextSharePwText = sharePw ? String(sharePw) : (sharePw === "" ? "" : (metadata.sharePwText || ""));
 
             const shareData = {
               path,
@@ -4548,12 +4610,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               await kvPut(`share/${md5}`, shareData, putOpts);
             }
             await putNote(path, value, {
-              ...metadata,
-              ...mode !== void 0 && { mode },
+              ...baseMeta,
               share: true,
               shareSlug: slug,
               hasSharePw: !!shareData.sharePw,
               sharePw: shareData.sharePw,
+              sharePwText: nextSharePwText,
               shareTtl: ttlSec,
               shareExpireAt: expireAt,
               shareBurn: isBurn
@@ -4561,30 +4623,29 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             return returnJSON(0, {
               slug,
               hasSharePw: !!shareData.sharePw,
+              sharePwText: nextSharePwText,
               ttl: ttlSec,
               expireAt,
-              burnAfterReading: isBurn
+              burnAfterReading: isBurn,
+              rawPublic: !!baseMeta.rawPublic
             });
           } else if (share === false) {
             await deleteShareKeys(metadata.shareSlug, path, null);
             await putNote(path, value, {
-              ...metadata,
-              ...mode !== void 0 && { mode },
+              ...baseMeta,
               share: false,
               shareSlug: null,
               hasSharePw: false,
               sharePw: "",
+              sharePwText: "",
               shareTtl: 0,
               shareExpireAt: 0,
               shareBurn: false
             });
-            return returnJSON(0);
-          } else if (mode !== void 0) {
-            await putNote(path, value, {
-              ...metadata,
-              mode
-            });
-            return returnJSON(0);
+            return returnJSON(0, { rawPublic: !!baseMeta.rawPublic });
+          } else if (mode !== void 0 || typeof rawPublic === "boolean") {
+            await putNote(path, value, baseMeta);
+            return returnJSON(0, { rawPublic: !!baseMeta.rawPublic });
           }
           return returnJSON(0);
         } catch (error) {
@@ -4787,7 +4848,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
   // 14. Raw Markdown Output (/raw/:path and /:path.md)
   async function handleNoteRaw(request, path) {
     const { value, metadata } = await queryNote(path);
-    const hasAccess = await verifyNoteAccess(request, path, metadata);
+    const hasAccess = metadata.rawPublic === true || await verifyNoteAccess(request, path, metadata);
 
     if (!hasAccess) {
       return new Response("Error: Unauthorized. Please provide password via ?pw=, -H \"x-note-pw: ...\", or -u :password\n", {
@@ -5211,6 +5272,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
     if (method === "GET" && pathname === "/api/notes") {
       return handleNotes(request);
+    }
+    if (method === "GET" && pathname === "/api/shares") {
+      return handleShares(request);
     }
     if (method === "GET" && pathname === "/api/quota") {
       return handleQuota(request);
