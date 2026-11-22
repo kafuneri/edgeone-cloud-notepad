@@ -782,7 +782,6 @@ const store = new Proxy({}, {
             </div>
             ` : ""}
         <div class="status-row">
-            ${!isEdit && path ? `<a href="/raw/${encodeURI(path)}" target="_blank" class="opt-button" style="text-decoration:none; font-size:12px; padding:2px 8px; display:inline-flex; align-items:center;" title="${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}">${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}</a>` : ""}
             <span id="status-word-count" style="font-size:12px; color:#57606a; white-space:nowrap; user-select:none;">${SUPPORTED_LANG[lang].wordsCount}: 0 · ${SUPPORTED_LANG[lang].charsCount}: 0 · 0 ${SUPPORTED_LANG[lang].linesCount}</span>
             <div style="display:flex; align-items:center; gap:8px; margin-left:auto;">
                 <a class="github-link" title="Github" target="_blank" href="https://github.com/kafuneri/edgeone-cloud-notepad" rel="noreferrer">
@@ -800,7 +799,7 @@ var escapeHtml = (str) => String(str ?? "")
   .replace(/"/g, "&quot;")
   .replace(/'/g, "&#39;");
 var MODAL = (lang, ext = {}) => `
-<div class="modal share-modal">
+<div class="modal share-modal" style="display:none; position:fixed; inset:0; z-index:1000;">
     <div class="modal-mask"></div>
     <div class="modal-content" style="max-width: 440px; padding: 24px; box-sizing: border-box; border-radius: 8px;">
         <span class="close-btn">✕</span>
@@ -816,7 +815,10 @@ var MODAL = (lang, ext = {}) => `
 
         <div style="margin-bottom: 14px; text-align: left;">
           <label style="display: block; font-size: 12px; color: #57606a; margin-bottom: 5px; font-weight: 500;">${SUPPORTED_LANG[lang].sharePwLabel}</label>
-          <input type="password" id="share-custom-pw" placeholder="${SUPPORTED_LANG[lang].sharePwPh}" style="width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1px solid #d0d7de; border-radius: 6px; font-size: 13px; outline: none;" />
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <input type="password" id="share-custom-pw" value="${escapeHtml(ext.sharePwText || "")}" placeholder="${SUPPORTED_LANG[lang].sharePwPh}" style="flex: 1; min-width: 0; box-sizing: border-box; padding: 7px 10px; border: 1px solid #d0d7de; border-radius: 6px; font-size: 13px; outline: none;" />
+            <button type="button" id="toggle-share-pw-vis" style="padding: 7px 10px; border: 1px solid #d0d7de; border-radius: 6px; background: #f6f8fa; color: #24292f; font-size: 12px; cursor: pointer; flex-shrink: 0;">${lang === "zh" ? "显示" : "Show"}</button>
+          </div>
         </div>
 
         <div style="margin-bottom: 14px; text-align: left;">
@@ -837,6 +839,8 @@ var MODAL = (lang, ext = {}) => `
           </label>
         </div>
 
+        <div id="share-error-msg" style="display: none; margin-bottom: 10px; padding: 7px 10px; font-size: 12px; color: #cf222e; background: #ffebe9; border: 1px solid #ffc1c0; border-radius: 6px; text-align: left;"></div>
+
         <div style="display: flex; gap: 8px; margin-bottom: 14px;">
           <button id="save-share-btn" class="opt-button" style="flex: 1; background: #2da44e; color: #fff; border-color: #2da44e; padding: 7px 14px; font-weight: 600;">${SUPPORTED_LANG[lang].saveShare}</button>
           <button id="disable-share-btn" class="opt-button" style="color: #cf222e; border-color: #d0d7de; padding: 7px 12px;">${SUPPORTED_LANG[lang].disableShare}</button>
@@ -850,6 +854,19 @@ var MODAL = (lang, ext = {}) => `
           <div style="display: flex; gap: 6px;">
             <input type="text" id="share-final-url" readonly value="" style="flex: 1; padding: 6px 10px; font-size: 12px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; outline: none;" />
             <button class="opt-button" id="copy-share-btn" style="white-space: nowrap;">${SUPPORTED_LANG[lang].copy}</button>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #eaecef; text-align: left;">
+          <label style="display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: #1f2328; cursor: pointer; user-select: none;">
+            <span>${lang === "zh" ? "允许 Raw 无密码公开只读 (/raw/...)" : "Public Read-Only Raw Access (/raw/...)"}</span>
+            <input type="checkbox" id="share-raw-public" ${ext.rawPublic ? "checked" : ""} style="width: 15px; height: 15px; cursor: pointer;" />
+          </label>
+          <div id="share-raw-link-box" style="display: ${ext.rawPublic ? "block" : "none"}; margin-top: 8px;">
+            <div style="display: flex; gap: 6px;">
+              <input type="text" id="share-raw-final-url" readonly value="" style="flex: 1; padding: 6px 10px; font-size: 12px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; outline: none;" />
+              <button class="opt-button" id="copy-raw-btn" style="white-space: nowrap;">${SUPPORTED_LANG[lang].copy}</button>
+            </div>
           </div>
         </div>
     </div>
@@ -908,6 +925,33 @@ var HISTORY_MODAL = (lang) => `
         <div id="history-mgr-empty" style="display:none; flex-direction:column; align-items:center; justify-content:center; padding:45px 0; color:#8c959f; font-size:13px;">
             <div style="font-size:14px; margin-bottom:6px; color:#57606a;">${SUPPORTED_LANG[lang].historyEmpty || "当前笔记暂无历史快照"}</div>
             <div style="font-size:12px; color:#afb8c1;">保存内容变动后将自动记录（间隔至少 1 分钟）</div>
+        </div>
+    </div>
+</div>
+`;
+var SHARE_MGR_MODAL = (lang) => `
+<div class="modal share-mgr-modal" id="share-mgr-modal" style="display:none; position:fixed; inset:0; z-index:1000; align-items:center; justify-content:center;">
+    <div class="modal-mask" id="share-mgr-mask" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(2px);"></div>
+    <div class="modal-content" style="position:relative; z-index:1001; max-width:760px; width:92vw; max-height:85vh; padding:20px 24px; box-sizing:border-box; border-radius:12px; display:flex; flex-direction:column; overflow:hidden; background:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e1e4e8; padding-bottom:12px; margin-bottom:12px; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                <h3 style="margin:0; font-size:16px; color:#1f2328; font-weight:600; white-space:nowrap;">${lang === "zh" ? "分享与Raw管理" : "Share & Raw Manager"}</h3>
+                <span id="share-mgr-count-badge" style="font-size:11px; padding:2px 8px; border-radius:10px; background:#f0f6fc; color:#0969da; border:1px solid #d0d7de; white-space:nowrap;">0</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                <button id="share-mgr-refresh-btn" type="button" class="opt-button" style="padding:4px 10px; font-size:12px; background:#f6f8fa; color:#24292f; border:1px solid #d0d7de; cursor:pointer;">${lang === "zh" ? "刷新状态" : "Refresh"}</button>
+                <span class="close-btn" id="share-mgr-close" style="position:static; width:auto; height:auto; line-height:1; cursor:pointer; font-size:18px; color:#57606a; padding:2px 6px;">✕</span>
+            </div>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px;">
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button id="share-mgr-tab-shared" type="button" class="opt-button" style="padding:4px 10px; font-size:12px; background:#0969da; color:#fff; border:1px solid #0969da; cursor:pointer;">${lang === "zh" ? "已分享" : "Shared"}</button>
+                <button id="share-mgr-tab-raw" type="button" class="opt-button" style="padding:4px 10px; font-size:12px; background:#f6f8fa; color:#57606a; border:1px solid #d0d7de; cursor:pointer;">${lang === "zh" ? "Raw公开" : "Raw Public"}</button>
+                <button id="share-mgr-tab-all" type="button" class="opt-button" style="padding:4px 10px; font-size:12px; background:#f6f8fa; color:#57606a; border:1px solid #d0d7de; cursor:pointer;">${lang === "zh" ? "全部笔记" : "All Notes"}</button>
+            </div>
+            <input type="text" id="share-mgr-search" placeholder="${lang === "zh" ? "搜索笔记路径或短链..." : "Search note path or slug..."}" style="flex:1; min-width:160px; max-width:240px; padding:5px 10px; font-size:12px; border:1px solid #d0d7de; border-radius:6px; outline:none; box-sizing:border-box;" />
+        </div>
+        <div id="share-mgr-list" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; min-height:200px; max-height:58vh; padding-right:2px;">
         </div>
     </div>
 </div>
@@ -1376,6 +1420,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         width: 90% !important;
         max-width: 440px !important;
         height: auto !important;
+        max-height: 90vh !important;
+        overflow-y: auto !important;
         display: block !important;
         padding: 24px 28px !important;
         box-sizing: border-box !important;
@@ -1384,7 +1430,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22) !important;
         z-index: 1000 !important;
       }
-      .image-modal .modal-content, .history-modal .modal-content {
+      .image-modal .modal-content, .history-modal .modal-content, .share-mgr-modal .modal-content {
         position: fixed !important;
         top: 50% !important;
         left: 50% !important;
@@ -1393,7 +1439,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         transform: translate(-50%, -50%) !important;
         margin: 0 !important;
         width: 90% !important;
-        max-width: 720px !important;
+        max-width: 760px !important;
         height: auto !important;
         min-height: 320px !important;
         max-height: 85vh !important;
@@ -1843,11 +1889,15 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         </button>
       </div>
       <div class="sidebar-footer">
-        <div style="display:flex; flex-direction:column; gap:2px; text-align:left;">
+        <div style="display:flex; flex-direction:column; gap:3px; text-align:left;">
           <span>${isPrivateMode ? SUPPORTED_LANG[lang].privateVault : SUPPORTED_LANG[lang].publicVault}</span>
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span id="sidebar-img-quota" style="font-size:11px; color:#8c959f;">配额: 200MB</span>
-            <a href="javascript:void(0)" id="sidebar-open-img-mgr" style="font-size:11px; color:#0969da; text-decoration:none; cursor:pointer;">[管理]</a>
+          <div style="display:grid; grid-template-columns:auto auto auto; align-items:baseline; column-gap:4px; row-gap:3px; width:fit-content;">
+            <span style="font-size:11px; color:#8c959f; white-space:nowrap;">${lang === "zh" ? "图片:" : "Images:"}</span>
+            <span id="sidebar-img-quota" style="font-size:11px; color:#8c959f; text-align:center; white-space:nowrap;">0.00MB / 200MB</span>
+            <a href="javascript:void(0)" id="sidebar-open-img-mgr" style="font-size:11px; color:#0969da; text-decoration:none; cursor:pointer; white-space:nowrap; text-align:right; margin-left:4px;">[${lang === "zh" ? "管理" : "Manage"}]</a>
+            <span style="font-size:11px; color:#8c959f; white-space:nowrap;">${lang === "zh" ? "分享:" : "Shares:"}</span>
+            <span id="sidebar-share-stats" style="font-size:11px; color:#8c959f; text-align:center; white-space:nowrap;">0/0 · RAW: 0/0</span>
+            <a href="javascript:void(0)" id="sidebar-open-share-mgr" style="font-size:11px; color:#0969da; text-decoration:none; cursor:pointer; white-space:nowrap; text-align:right; margin-left:4px;">[${lang === "zh" ? "管理" : "Manage"}]</a>
           </div>
         </div>
         ${isPrivateMode ? `<button id="sidebar-logout-btn" class="sidebar-logout-btn">${SUPPORTED_LANG[lang].logout}</button>` : ""}
@@ -1921,6 +1971,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     ${MODAL(lang, ext)}
     ${isPrivateMode ? IMAGE_MODAL(lang) : ""}
     ${isPrivateMode ? HISTORY_MODAL(lang) : ""}
+    ${isPrivateMode ? SHARE_MGR_MODAL(lang) : ""}
     ${LIGHTBOX()}
     ${TOC_PANEL(lang)}
     ${FOOTER({ ...ext, isEdit, lang, isPrivateMode, path: title })}
@@ -1980,12 +2031,21 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           };
         }
 
+        function updateSidebarShareStats(notes) {
+          const statsEl = document.getElementById("sidebar-share-stats");
+          if (!statsEl || !Array.isArray(notes)) return;
+          const total = notes.length;
+          const shareCount = notes.filter(function(n) { return n && n.share; }).length;
+          const rawCount = notes.filter(function(n) { return n && n.rawPublic; }).length;
+          statsEl.textContent = shareCount + "/" + total + " · RAW: " + rawCount + "/" + total;
+        }
+
         async function loadNotes() {
           try {
             fetch("/api/quota").then(r => r.json()).then(q => {
               if (q.err === 0 && q.data) {
                 const qEl = document.getElementById("sidebar-img-quota");
-                if (qEl) qEl.textContent = "图片: " + q.data.usedMB + "MB / 200MB";
+                if (qEl) qEl.textContent = q.data.usedMB + "MB / 200MB";
               }
             }).catch(() => {});
 
@@ -1993,6 +2053,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             const data = await res.json();
             if (data.err === 0 && Array.isArray(data.data)) {
               allNotes = data.data;
+              updateSidebarShareStats(allNotes);
               renderTree(allNotes);
             } else {
               treeContainer.innerHTML = '<div style="color:#cf222e;padding:16px;text-align:center;">' + (data.msg || "加载失败") + '</div>';
@@ -2252,6 +2313,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         const shareFinalUrl = document.querySelector("#share-final-url");
         const shareLinkBox = document.querySelector("#share-link-box");
         const shareBadgesWrap = document.querySelector("#share-badges-wrap");
+        const shareRawCheckbox = document.querySelector("#share-raw-public");
+        const shareRawLinkBox = document.querySelector("#share-raw-link-box");
+        const shareRawFinalUrl = document.querySelector("#share-raw-final-url");
+        const copyRawBtn = document.querySelector("#copy-raw-btn");
 
         function updateShareBadges(ttl, isBurn) {
           if (!shareBadgesWrap) return;
@@ -2269,14 +2334,39 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           shareBadgesWrap.innerHTML = html;
         }
 
+        function syncRawBoxUI(isRawPub) {
+          if (shareRawCheckbox) shareRawCheckbox.checked = !!isRawPub;
+          if (shareRawLinkBox && shareRawFinalUrl) {
+            if (isRawPub) {
+              shareRawFinalUrl.value = window.location.origin + "/raw" + window.location.pathname;
+              shareRawLinkBox.style.display = "block";
+            } else {
+              shareRawLinkBox.style.display = "none";
+            }
+          }
+        }
+
+        function buildShareUrlWithPw(slug, pw) {
+          let u = window.location.origin + "/share/" + encodeURIComponent(slug);
+          if (pw) u += "?pw=" + encodeURIComponent(pw);
+          return u;
+        }
+
         function openShareModal() {
           if (shareModal) {
             shareModal.style.display = "block";
-            const currentSlug = shareCustomSlug.value.trim() || "${ext.shareSlug || ""}";
+            const errBox = document.getElementById("share-error-msg");
+            if (errBox) { errBox.style.display = "none"; errBox.textContent = ""; }
+            if (shareCustomSlug) shareCustomSlug.style.borderColor = "#d0d7de";
+            const currentSlug = shareCustomSlug.value.trim() || ${JSON.stringify(ext.shareSlug || "")};
             if (currentSlug) {
-              shareFinalUrl.value = window.location.origin + "/share/" + currentSlug;
+              const currentPw = (shareCustomPw && shareCustomPw.value.trim()) || ${JSON.stringify(ext.sharePwText || "")};
+              shareFinalUrl.value = buildShareUrlWithPw(currentSlug, currentPw);
               shareLinkBox.style.display = "block";
               updateShareBadges();
+            }
+            if (shareRawCheckbox) {
+              syncRawBoxUI(shareRawCheckbox.checked);
             }
           }
         }
@@ -2285,92 +2375,581 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           if (shareModal) shareModal.style.display = "none";
         }
 
-        if (shareTriggerBtn) shareTriggerBtn.onclick = openShareModal;
-        if (shareCloseBtn) shareCloseBtn.onclick = closeShareModal;
-        if (shareModal) {
-          const mask = shareModal.querySelector(".modal-mask");
-          if (mask) mask.onclick = closeShareModal;
+        function bindShareModalEvents() {
+          if (shareTriggerBtn) shareTriggerBtn.onclick = openShareModal;
+          if (shareCloseBtn) shareCloseBtn.onclick = closeShareModal;
+          if (shareModal) {
+            const mask = shareModal.querySelector(".modal-mask");
+            if (mask) mask.onclick = closeShareModal;
+          }
+          const togglePwBtn = document.getElementById("toggle-share-pw-vis");
+          if (togglePwBtn && shareCustomPw) {
+            togglePwBtn.onclick = function() {
+              const isHidden = shareCustomPw.type === "password";
+              shareCustomPw.type = isHidden ? "text" : "password";
+              togglePwBtn.innerText = isHidden ? "${lang === 'zh' ? '隐藏' : 'Hide'}" : "${lang === 'zh' ? '显示' : 'Show'}";
+            };
+          }
+
+          if (shareCustomSlug) {
+            shareCustomSlug.oninput = function() {
+              shareCustomSlug.style.borderColor = "#d0d7de";
+              const errBox = document.getElementById("share-error-msg");
+              if (errBox) errBox.style.display = "none";
+            };
+          }
+
+          if (saveShareBtn) {
+            saveShareBtn.onclick = async function(e) {
+              if (e && e.preventDefault) e.preventDefault();
+              if (e && e.stopPropagation) e.stopPropagation();
+              const slug = shareCustomSlug.value.trim();
+              const pw = shareCustomPw.value.trim();
+              const ttl = Number(shareCustomTtl ? shareCustomTtl.value : 0) || 0;
+              const burn = shareBurnCheckbox ? shareBurnCheckbox.checked : false;
+              const rawPub = shareRawCheckbox ? shareRawCheckbox.checked : undefined;
+              const errBox = document.getElementById("share-error-msg");
+              if (errBox) { errBox.style.display = "none"; errBox.textContent = ""; }
+              if (shareCustomSlug) shareCustomSlug.style.borderColor = "#d0d7de";
+
+              saveShareBtn.innerText = "保存中...";
+              try {
+                const res = await fetch(window.location.pathname + "/setting", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    share: true,
+                    shareSlug: slug,
+                    sharePw: pw,
+                    ttl: ttl,
+                    burnAfterReading: burn,
+                    rawPublic: rawPub
+                  })
+                });
+                const data = await res.json();
+                saveShareBtn.innerText = "${SUPPORTED_LANG[lang].saveShare}";
+                if (data.err === 0) {
+                  const finalSlug = (data.data && data.data.slug) || slug;
+                  shareCustomSlug.value = finalSlug;
+                  shareFinalUrl.value = buildShareUrlWithPw(finalSlug, pw);
+                  shareLinkBox.style.display = "block";
+                  updateShareBadges(ttl, burn);
+                  if (typeof loadShareManagerList === "function") loadShareManagerList(false);
+                  saveShareBtn.innerText = "${lang === 'zh' ? '已生成' : 'Saved'}";
+                  setTimeout(function() {
+                    if (saveShareBtn) saveShareBtn.innerText = "${SUPPORTED_LANG[lang].saveShare}";
+                  }, 1500);
+                } else {
+                  const msg = data.msg || "分享失败";
+                  if (errBox) {
+                    errBox.textContent = msg;
+                    errBox.style.display = "block";
+                  } else {
+                    alert(msg);
+                  }
+                  if (data.err === 409 && shareCustomSlug) {
+                    shareCustomSlug.style.borderColor = "#cf222e";
+                    shareCustomSlug.focus();
+                  }
+                }
+              } catch (err) {
+                saveShareBtn.innerText = "${SUPPORTED_LANG[lang].saveShare}";
+                if (errBox) {
+                  errBox.textContent = "请求异常: " + err.message;
+                  errBox.style.display = "block";
+                } else {
+                  alert("请求异常: " + err.message);
+                }
+              }
+            };
+          }
+
+          if (disableShareBtn) {
+            disableShareBtn.onclick = async function() {
+              if (!confirm("${lang === 'zh' ? '确定要关闭此笔记的对外分享吗？' : 'Disable share for this note?'}")) return;
+              try {
+                const res = await fetch(window.location.pathname + "/setting", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ share: false })
+                });
+                const data = await res.json();
+                if (data.err === 0) {
+                  shareLinkBox.style.display = "none";
+                  shareCustomSlug.value = "";
+                  shareCustomPw.value = "";
+                  if (shareCustomTtl) shareCustomTtl.value = "0";
+                  if (shareBurnCheckbox) shareBurnCheckbox.checked = false;
+                  if (shareBadgesWrap) shareBadgesWrap.innerHTML = "";
+                  if (typeof loadShareManagerList === "function") loadShareManagerList(false);
+                  alert("${lang === 'zh' ? '已关闭对外分享' : 'Sharing disabled'}");
+                  closeShareModal();
+                } else {
+                  alert(data.msg || "操作失败");
+                }
+              } catch (err) {
+                alert("请求异常: " + err.message);
+              }
+            };
+          }
         }
 
-        if (saveShareBtn) {
-          saveShareBtn.onclick = async function() {
-            const slug = shareCustomSlug.value.trim();
-            const pw = shareCustomPw.value.trim();
-            const ttl = Number(shareCustomTtl ? shareCustomTtl.value : 0) || 0;
-            const burn = shareBurnCheckbox ? shareBurnCheckbox.checked : false;
+        bindShareModalEvents();
+        window.addEventListener("DOMContentLoaded", bindShareModalEvents);
 
-            saveShareBtn.innerText = "保存中...";
+        if (shareRawCheckbox) {
+          shareRawCheckbox.onchange = async function() {
+            const nextVal = !!shareRawCheckbox.checked;
+            shareRawCheckbox.disabled = true;
             try {
               const res = await fetch(window.location.pathname + "/setting", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  share: true,
-                  shareSlug: slug,
-                  sharePw: pw,
-                  ttl: ttl,
-                  burnAfterReading: burn
-                })
+                body: JSON.stringify({ rawPublic: nextVal })
               });
               const data = await res.json();
-              saveShareBtn.innerText = "${SUPPORTED_LANG[lang].saveShare}";
               if (data.err === 0) {
-                const finalSlug = (data.data && data.data.slug) || slug;
-                shareCustomSlug.value = finalSlug;
-                shareFinalUrl.value = window.location.origin + "/share/" + finalSlug;
-                shareLinkBox.style.display = "block";
-                updateShareBadges(ttl, burn);
-                alert("${lang === 'zh' ? '分享链接已生成！' : 'Share link generated!'}");
+                syncRawBoxUI(nextVal);
               } else {
-                alert(data.msg || "分享失败");
+                syncRawBoxUI(!nextVal);
+                alert(data.msg || "更新 Raw 公开状态失败");
               }
             } catch (err) {
-              saveShareBtn.innerText = "${SUPPORTED_LANG[lang].saveShare}";
+              syncRawBoxUI(!nextVal);
               alert("请求异常: " + err.message);
+            } finally {
+              shareRawCheckbox.disabled = false;
             }
           };
         }
 
-        if (disableShareBtn) {
-          disableShareBtn.onclick = async function() {
-            if (!confirm("${lang === 'zh' ? '确定要关闭此笔记的对外分享吗？' : 'Disable share for this note?'}")) return;
+        function flashCopiedBtn(btnEl) {
+          if (!btnEl) return;
+          if (!btnEl.dataset.origText) btnEl.dataset.origText = btnEl.innerText;
+          btnEl.innerText = "${lang === 'zh' ? '已复制' : 'Copied'}";
+          clearTimeout(btnEl._copyTimer);
+          btnEl._copyTimer = setTimeout(function() {
+            if (btnEl && btnEl.dataset.origText) btnEl.innerText = btnEl.dataset.origText;
+          }, 1500);
+        }
+
+        function fallbackCopyText(val, inputEl, btnEl) {
+          let ok = false;
+          if (inputEl) {
             try {
-              const res = await fetch(window.location.pathname + "/setting", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ share: false })
-              });
-              const data = await res.json();
-              if (data.err === 0) {
-                shareLinkBox.style.display = "none";
-                shareCustomSlug.value = "";
-                shareCustomPw.value = "";
-                if (shareCustomTtl) shareCustomTtl.value = "0";
-                if (shareBurnCheckbox) shareBurnCheckbox.checked = false;
-                if (shareBadgesWrap) shareBadgesWrap.innerHTML = "";
-                alert("${lang === 'zh' ? '已关闭对外分享' : 'Sharing disabled'}");
-                closeShareModal();
-              } else {
-                alert(data.msg || "操作失败");
+              inputEl.focus();
+              inputEl.select();
+              if (typeof inputEl.setSelectionRange === "function") {
+                inputEl.setSelectionRange(0, val.length);
               }
-            } catch (err) {
-              alert("请求异常: " + err.message);
-            }
-          };
+              ok = document.execCommand("copy");
+            } catch (e) {}
+          }
+          if (!ok) {
+            const ta = document.createElement("textarea");
+            ta.value = val;
+            ta.setAttribute("readonly", "");
+            ta.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0;";
+            document.body.appendChild(ta);
+            try {
+              ta.focus();
+              ta.select();
+              if (typeof ta.setSelectionRange === "function") {
+                ta.setSelectionRange(0, val.length);
+              }
+              ok = document.execCommand("copy");
+            } catch (e) {}
+            document.body.removeChild(ta);
+          }
+          if (ok) {
+            flashCopiedBtn(btnEl);
+          } else {
+            prompt("${lang === 'zh' ? '当前环境不支持自动复制，请手动复制链接：' : 'Copy link manually:'}", val);
+          }
+        }
+
+        function copyInputOrText(inputEl, text, btnEl) {
+          const val = inputEl ? inputEl.value : text;
+          if (!val) return;
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(val).then(function() {
+              flashCopiedBtn(btnEl);
+            }).catch(function() {
+              fallbackCopyText(val, inputEl, btnEl);
+            });
+          } else {
+            fallbackCopyText(val, inputEl, btnEl);
+          }
         }
 
         if (copyShareBtn) {
           copyShareBtn.onclick = function() {
-            if (shareFinalUrl && shareFinalUrl.value) {
-              navigator.clipboard.writeText(shareFinalUrl.value).then(() => {
-                alert("${SUPPORTED_LANG[lang].copy}!");
-              }).catch(() => {
-                shareFinalUrl.select();
-                document.execCommand("copy");
-                alert("${SUPPORTED_LANG[lang].copy}!");
-              });
-            }
+            copyInputOrText(shareFinalUrl, null, copyShareBtn);
           };
+        }
+        if (copyRawBtn) {
+          copyRawBtn.onclick = function() {
+            copyInputOrText(shareRawFinalUrl, null, copyRawBtn);
+          };
+        }
+
+        // --- 3. Global Share & Raw Manager Modal ---
+        const shareMgrModal = document.getElementById("share-mgr-modal");
+        const shareMgrMask = document.getElementById("share-mgr-mask");
+        const shareMgrClose = document.getElementById("share-mgr-close");
+        const shareMgrRefresh = document.getElementById("share-mgr-refresh-btn");
+        const shareMgrListEl = document.getElementById("share-mgr-list");
+        const shareMgrCountBadge = document.getElementById("share-mgr-count-badge");
+        const shareMgrSearch = document.getElementById("share-mgr-search");
+        const shareMgrTabShared = document.getElementById("share-mgr-tab-shared");
+        const shareMgrTabRaw = document.getElementById("share-mgr-tab-raw");
+        const shareMgrTabAll = document.getElementById("share-mgr-tab-all");
+        const sidebarOpenShareMgr = document.getElementById("sidebar-open-share-mgr");
+
+        let shareMgrItems = [];
+        let shareMgrTab = "shared";
+        const shareMgrCollapsed = new Set();
+
+        function escText(str) {
+          return String(str || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        function encodePathSegments(p) {
+          return String(p || "").split("/").map(function(seg) { return encodeURIComponent(seg); }).join("/");
+        }
+
+        function updateShareMgrTabsUI() {
+          const tabs = [
+            { el: shareMgrTabShared, key: "shared" },
+            { el: shareMgrTabRaw, key: "raw" },
+            { el: shareMgrTabAll, key: "all" }
+          ];
+          for (let i = 0; i < tabs.length; i++) {
+            const t = tabs[i];
+            if (!t.el) continue;
+            if (shareMgrTab === t.key) {
+              t.el.style.background = "#0969da";
+              t.el.style.color = "#fff";
+              t.el.style.borderColor = "#0969da";
+            } else {
+              t.el.style.background = "#f6f8fa";
+              t.el.style.color = "#57606a";
+              t.el.style.borderColor = "#d0d7de";
+            }
+          }
+        }
+
+        function renderShareMgrCard(item, displayLabel, now) {
+          const safeDisplay = escText(displayLabel);
+          const encodedPath = encodePathSegments(item.path);
+          const encAttrPath = escText(item.path);
+          const isExpired = !!(item.share && item.shareExpireAt && now > item.shareExpireAt);
+          const shareUrl = item.shareSlug ? buildShareUrlWithPw(item.shareSlug, item.sharePwText || "") : "";
+          const rawUrl = window.location.origin + "/raw/" + encodedPath;
+
+          const showSharePart = (shareMgrTab === "shared" || shareMgrTab === "all");
+          const showRawPart = (shareMgrTab === "raw" || shareMgrTab === "all");
+
+          let badges = "";
+          if (showSharePart && item.share) {
+            if (isExpired) {
+              badges += '<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:#fff8c5;color:#9a6700;border:1px solid #d4a72c;">${lang === "zh" ? "分享已过期" : "Expired"}</span>';
+            } else {
+              badges += '<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:#dafbe1;color:#1a7f37;border:1px solid #aceebb;">${lang === "zh" ? "网页分享" : "Shared"}</span>';
+            }
+            if (item.hasSharePw) {
+              badges += '<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:#f6f8fa;color:#57606a;border:1px solid #d0d7de;">${lang === "zh" ? "提取码" : "Protected"}</span>';
+            }
+            if (item.shareBurn) {
+              badges += '<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:#ffebe9;color:#cf222e;border:1px solid #ffc1c0;">${lang === "zh" ? "阅后即焚" : "Burn"}</span>';
+            }
+          }
+          if (showRawPart && item.rawPublic) {
+            badges += '<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:#ddf4ff;color:#0969da;border:1px solid #b6e3ff;">${lang === "zh" ? "Raw 公开" : "Raw Public"}</span>';
+          }
+
+          let shareRow = "";
+          if (showSharePart && item.share) {
+            const pwInfoHtml = item.hasSharePw
+              ? (item.sharePwText
+                ? ' · ${lang === "zh" ? "提取码" : "Code"}: <code style="background:#f6f8fa;border:1px solid #d0d7de;border-radius:4px;padding:0 5px;color:#24292f;font-size:11px;">' + escText(item.sharePwText) + '</code>'
+                : ' · <span style="color:#8c959f;">${lang === "zh" ? "旧版未存明文，重设可见" : "Legacy pw"}</span>')
+              : '';
+            const copyPwBtnHtml = (item.hasSharePw && item.sharePwText)
+              ? '<button type="button" class="opt-button" data-sm-action="copy-url" data-url="' + escText(item.sharePwText) + '" style="padding:2px 8px;font-size:11px;background:#fff;color:#24292f;border:1px solid #d0d7de;">${lang === "zh" ? "复制提取码" : "Copy Code"}</button>'
+              : '';
+            shareRow = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:6px;border-top:1px dashed #eaecef;margin-top:6px;">' +
+              '<div style="font-size:12px;color:#57606a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px;" title="' + escText(shareUrl) + '">/share/' + escText(item.shareSlug) + pwInfoHtml + '</div>' +
+              '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">' +
+                '<button type="button" class="opt-button" data-sm-action="copy-url" data-url="' + escText(shareUrl) + '" style="padding:2px 8px;font-size:11px;background:#fff;color:#24292f;border:1px solid #d0d7de;">${lang === "zh" ? "复制分享" : "Copy Share"}</button>' +
+                copyPwBtnHtml +
+                '<button type="button" class="opt-button" data-sm-action="disable-share" data-path="' + encAttrPath + '" style="padding:2px 8px;font-size:11px;background:#fff;color:#cf222e;border:1px solid #d0d7de;">' + (isExpired ? "${lang === 'zh' ? '清理过期' : 'Clean'}" : "${lang === 'zh' ? '关闭分享' : 'Disable Share'}") + '</button>' +
+              '</div>' +
+            '</div>';
+          }
+
+          let rawRow = "";
+          if (showRawPart) {
+            const rawBtnText = item.rawPublic ? "${lang === 'zh' ? '关闭 Raw' : 'Disable Raw'}" : "${lang === 'zh' ? '开启 Raw 公开' : 'Enable Raw'}";
+            const rawBtnStyle = item.rawPublic ? "padding:2px 8px;font-size:11px;background:#fff;color:#cf222e;border:1px solid #d0d7de;" : "padding:2px 8px;font-size:11px;background:#f6f8fa;color:#0969da;border:1px solid #d0d7de;";
+            rawRow = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:6px;border-top:1px dashed #eaecef;margin-top:6px;">' +
+              '<div style="font-size:12px;color:#57606a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px;" title="' + escText(rawUrl) + '">' + (item.rawPublic ? ("/raw/" + escText(item.path)) : "${lang === 'zh' ? 'Raw 直读：私有（需鉴权）' : 'Raw: Private'}") + '</div>' +
+              '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+                (item.rawPublic ? '<button type="button" class="opt-button" data-sm-action="copy-url" data-url="' + escText(rawUrl) + '" style="padding:2px 8px;font-size:11px;background:#fff;color:#24292f;border:1px solid #d0d7de;">${lang === "zh" ? "复制 Raw" : "Copy Raw"}</button>' : '') +
+                '<button type="button" class="opt-button" data-sm-action="toggle-raw" data-path="' + encAttrPath + '" data-next="' + (item.rawPublic ? '0' : '1') + '" style="' + rawBtnStyle + '">' + rawBtnText + '</button>' +
+              '</div>' +
+            '</div>';
+          }
+
+          return '<div style="border:1px solid #d0d7de;border-radius:8px;padding:10px 12px;background:#ffffff;">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">' +
+              '<a href="/' + encodedPath + '" title="' + escText(item.path) + '" style="font-size:13px;font-weight:600;color:#0969da;text-decoration:none;word-break:break-all;">' + safeDisplay + '</a>' +
+              '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">' + badges + '</div>' +
+            '</div>' +
+            shareRow +
+            rawRow +
+          '</div>';
+        }
+
+        function countFolderStats(node) {
+          let total = node.notes.length;
+          let active = 0;
+          for (let i = 0; i < node.notes.length; i++) {
+            if (node.notes[i].share || node.notes[i].rawPublic) active++;
+          }
+          for (const k in node.children) {
+            const sub = countFolderStats(node.children[k]);
+            total += sub.total;
+            active += sub.active;
+          }
+          return { total: total, active: active };
+        }
+
+        function renderShareMgrList() {
+          if (!shareMgrListEl) return;
+          const kw = (shareMgrSearch ? shareMgrSearch.value : "").trim().toLowerCase();
+          const now = Date.now();
+          const sharedItems = shareMgrItems.filter(function(item) { return !!item.share; });
+          const rawItems = shareMgrItems.filter(function(item) { return !!item.rawPublic; });
+          if (shareMgrCountBadge) {
+            if (shareMgrTab === "shared") shareMgrCountBadge.textContent = String(sharedItems.length) + " / " + String(shareMgrItems.length);
+            else if (shareMgrTab === "raw") shareMgrCountBadge.textContent = String(rawItems.length) + " / " + String(shareMgrItems.length);
+            else shareMgrCountBadge.textContent = String(shareMgrItems.length);
+          }
+
+          let list = shareMgrTab === "shared" ? sharedItems : (shareMgrTab === "raw" ? rawItems : shareMgrItems);
+          if (kw) {
+            list = list.filter(function(item) {
+              return (item.path && item.path.toLowerCase().indexOf(kw) !== -1) ||
+                     (item.shareSlug && item.shareSlug.toLowerCase().indexOf(kw) !== -1);
+            });
+          }
+
+          if (list.length === 0) {
+            let emptyText = "${lang === 'zh' ? '没有匹配的笔记' : 'No matching notes'}";
+            if (!kw) {
+              if (shareMgrTab === "shared") emptyText = "${lang === 'zh' ? '暂无开启网页分享的笔记' : 'No shared notes'}";
+              else if (shareMgrTab === "raw") emptyText = "${lang === 'zh' ? '暂无开启 Raw 公开的笔记' : 'No public raw notes'}";
+            }
+            shareMgrListEl.innerHTML = '<div style="text-align:center;color:#8c959f;padding:40px 12px;font-size:13px;">' + emptyText + '</div>';
+            return;
+          }
+
+          const root = { children: {}, notes: [] };
+          for (let i = 0; i < list.length; i++) {
+            const item = list[i];
+            const parts = String(item.path || "").split("/");
+            let curr = root;
+            for (let j = 0; j < parts.length - 1; j++) {
+              const p = parts[j];
+              if (!curr.children[p]) curr.children[p] = { name: p, children: {}, notes: [] };
+              curr = curr.children[p];
+            }
+            curr.notes.push(item);
+          }
+
+          function renderTreeNode(node, prefixPath) {
+            let html = "";
+            const folderKeys = Object.keys(node.children);
+            for (let i = 0; i < folderKeys.length; i++) {
+              const folder = node.children[folderKeys[i]];
+              const fullFolderPath = prefixPath ? (prefixPath + "/" + folder.name) : folder.name;
+              const isCollapsed = !kw && shareMgrCollapsed.has(fullFolderPath);
+              const stats = countFolderStats(folder);
+              const arrowTransform = isCollapsed ? "transform:rotate(-90deg);" : "";
+              const contentDisplay = isCollapsed ? "display:none;" : "display:flex;";
+
+              html += '<div class="sm-folder" style="display:flex;flex-direction:column;gap:6px;">';
+              html += '  <div class="sm-folder-header" data-sm-folder="' + escText(fullFolderPath) + '" style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;cursor:pointer;user-select:none;">';
+              html += '    <div style="display:flex;align-items:center;gap:6px;min-width:0;">';
+              html += '      <span style="font-size:10px;color:#57606a;display:inline-block;transition:transform 0.15s;' + arrowTransform + '">▼</span>';
+              html += '      <svg viewBox="0 0 16 16" width="14" height="14" fill="#54aeff" style="flex-shrink:0;"><path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75z"></path></svg>';
+              html += '      <span style="font-size:13px;font-weight:600;color:#24292f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escText(folder.name) + '</span>';
+              html += '    </div>';
+              html += '    <span style="font-size:11px;color:#57606a;background:#fff;border:1px solid #d0d7de;border-radius:10px;padding:1px 7px;flex-shrink:0;">' + (shareMgrTab === "all" && stats.active > 0 ? (stats.active + " / " + stats.total) : String(stats.total)) + '</span>';
+              html += '  </div>';
+              html += '  <div style="' + contentDisplay + 'flex-direction:column;gap:8px;padding-left:12px;margin-left:8px;border-left:2px solid #eaecef;">';
+              html += renderTreeNode(folder, fullFolderPath);
+              html += '  </div>';
+              html += '</div>';
+            }
+
+            for (let i = 0; i < node.notes.length; i++) {
+              const item = node.notes[i];
+              const displayName = String(item.path || "").split("/").pop();
+              html += renderShareMgrCard(item, displayName, now);
+            }
+            return html;
+          }
+
+          shareMgrListEl.innerHTML = renderTreeNode(root, "");
+        }
+
+        async function loadShareManagerList(forceRefresh) {
+          if (!shareMgrListEl) return;
+          shareMgrListEl.innerHTML = '<div style="text-align:center;color:#8c959f;padding:30px;font-size:13px;">${lang === "zh" ? "正在加载状态..." : "Loading..."}</div>';
+          try {
+            const resp = await fetch("/api/shares" + (forceRefresh ? "?refresh=1" : ""));
+            const res = await resp.json();
+            if (res.err === 0 && Array.isArray(res.data)) {
+              shareMgrItems = res.data;
+              updateSidebarShareStats(shareMgrItems);
+              renderShareMgrList();
+            } else {
+              shareMgrListEl.innerHTML = '<div style="text-align:center;color:#cf222e;padding:30px;font-size:13px;">' + escText(res.msg || "加载失败") + '</div>';
+            }
+          } catch (err) {
+            shareMgrListEl.innerHTML = '<div style="text-align:center;color:#cf222e;padding:30px;font-size:13px;">' + escText(err.message) + '</div>';
+          }
+        }
+
+        window.openShareManager = function() {
+          if (!shareMgrModal) return;
+          closeSidebar();
+          shareMgrModal.style.display = "flex";
+          updateShareMgrTabsUI();
+          loadShareManagerList(false);
+        };
+
+        window.closeShareManager = function() {
+          if (shareMgrModal) shareMgrModal.style.display = "none";
+        };
+
+        if (sidebarOpenShareMgr) {
+          sidebarOpenShareMgr.onclick = function() { window.openShareManager(); };
+        }
+        if (shareMgrClose) {
+          shareMgrClose.onclick = function() { window.closeShareManager(); };
+        }
+        if (shareMgrMask) {
+          shareMgrMask.onclick = function() { window.closeShareManager(); };
+        }
+        if (shareMgrRefresh) {
+          shareMgrRefresh.onclick = function() { loadShareManagerList(true); };
+        }
+        if (shareMgrTabShared) {
+          shareMgrTabShared.onclick = function() {
+            shareMgrTab = "shared";
+            updateShareMgrTabsUI();
+            renderShareMgrList();
+          };
+        }
+        if (shareMgrTabRaw) {
+          shareMgrTabRaw.onclick = function() {
+            shareMgrTab = "raw";
+            updateShareMgrTabsUI();
+            renderShareMgrList();
+          };
+        }
+        if (shareMgrTabAll) {
+          shareMgrTabAll.onclick = function() {
+            shareMgrTab = "all";
+            updateShareMgrTabsUI();
+            renderShareMgrList();
+          };
+        }
+        if (shareMgrSearch) {
+          shareMgrSearch.oninput = function() { renderShareMgrList(); };
+        }
+        if (shareMgrListEl) {
+          shareMgrListEl.addEventListener("click", async function(e) {
+            const folderHdr = e.target && e.target.closest("[data-sm-folder]");
+            if (folderHdr) {
+              const fPath = folderHdr.getAttribute("data-sm-folder");
+              if (fPath) {
+                if (shareMgrCollapsed.has(fPath)) shareMgrCollapsed.delete(fPath);
+                else shareMgrCollapsed.add(fPath);
+                renderShareMgrList();
+              }
+              return;
+            }
+            const btn = e.target && e.target.closest("[data-sm-action]");
+            if (!btn) return;
+            const act = btn.getAttribute("data-sm-action");
+            if (act === "copy-url") {
+              copyInputOrText(null, btn.getAttribute("data-url"), btn);
+              return;
+            }
+            const targetPath = btn.getAttribute("data-path");
+            if (!targetPath) return;
+            const encodedPath = encodePathSegments(targetPath);
+            const curPath = decodeURIComponent(window.location.pathname.replace(new RegExp("^/+|/+$", "g"), ""));
+
+            if (act === "disable-share") {
+              if (!confirm("${lang === 'zh' ? '确定要关闭此笔记的网页分享吗？' : 'Disable share for this note?'}")) return;
+              btn.disabled = true;
+              try {
+                const resp = await fetch("/" + encodedPath + "/setting", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ share: false })
+                });
+                const res = await resp.json();
+                if (res.err === 0) {
+                  if (curPath === targetPath) {
+                    if (shareLinkBox) shareLinkBox.style.display = "none";
+                    if (shareCustomSlug) shareCustomSlug.value = "";
+                    if (shareBadgesWrap) shareBadgesWrap.innerHTML = "";
+                  }
+                  await loadShareManagerList(false);
+                } else {
+                  alert(res.msg || "操作失败");
+                  btn.disabled = false;
+                }
+              } catch (err) {
+                alert("请求异常: " + err.message);
+                btn.disabled = false;
+              }
+            } else if (act === "toggle-raw") {
+              const nextRaw = btn.getAttribute("data-next") === "1";
+              btn.disabled = true;
+              try {
+                const resp = await fetch("/" + encodedPath + "/setting", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ rawPublic: nextRaw })
+                });
+                const res = await resp.json();
+                if (res.err === 0) {
+                  if (curPath === targetPath) {
+                    syncRawBoxUI(nextRaw);
+                  }
+                  await loadShareManagerList(false);
+                } else {
+                  alert(res.msg || "操作失败");
+                  btn.disabled = false;
+                }
+              } catch (err) {
+                alert("请求异常: " + err.message);
+                btn.disabled = false;
+              }
+            }
+          });
         }
       })();
     </script>
@@ -2552,7 +3131,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               }
               const sidebarQuota = document.getElementById("sidebar-img-quota");
               if (sidebarQuota && quota.usedMB) {
-                sidebarQuota.textContent = "图片: " + quota.usedMB + "MB / 200MB";
+                sidebarQuota.textContent = quota.usedMB + "MB / 200MB";
               }
               if (list.length === 0) {
                 grid.innerHTML = "";
