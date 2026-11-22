@@ -2062,8 +2062,13 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           newBtn.onclick = function() {
             const name = prompt("${lang === 'zh' ? '输入新笔记名称 (支持用 / 分类，如 工作/周报):' : 'Enter note name (supports / for folders):'}");
             if (name && name.trim()) {
-              const clean = name.trim().replace(new RegExp('^/+', 'g'), '');
-              window.location.href = "/" + clean;
+              let clean = name.trim().replace(new RegExp('^/+|/+$', 'g'), '').replace(new RegExp('\\\\.md$', 'i'), '');
+              if (!clean) return;
+              if (new RegExp('/(delete|setting|auth|pw)$', 'i').test("/" + clean)) {
+                alert("${lang === 'zh' ? '笔记路径不能以 /delete、/setting、/auth、/pw 结尾' : 'Invalid note path suffix'}");
+                return;
+              }
+              window.location.href = "/" + encodePathSegments(clean);
             }
           };
         }
@@ -2078,6 +2083,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         }
 
         async function loadNotes() {
+          if (!treeContainer) return;
           try {
             fetch("/api/quota").then(r => r.json()).then(q => {
               if (q.err === 0 && q.data) {
@@ -2318,11 +2324,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 if (exportZipText) exportZipText.textContent = "${SUPPORTED_LANG[lang].exportingProgress || '打包中'} (" + (i + 1) + "/" + notes.length + ")...";
                 try {
                   const cleanPath = n.path.replace(new RegExp('^/+', 'g'), '');
-                  const rawResp = await fetch("/raw/" + encodeURI(cleanPath));
+                  const rawResp = await fetch("/raw/" + encodePathSegments(cleanPath));
                   if (rawResp.ok) {
                     const rawText = await rawResp.text();
                     let filePath = cleanPath;
-                    if (!filePath.endsWith(".md") && !filePath.endsWith(".txt")) {
+                    const baseName = filePath.split("/").pop() || "";
+                    if (baseName.indexOf(".") === -1) {
                       filePath += ".md";
                     }
                     zip.file(filePath, rawText);
@@ -3889,23 +3896,41 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               if (previewBox) previewBox.value = snapContent;
               if (applyBtn) {
                 applyBtn.style.display = "inline-block";
-                applyBtn.onclick = function() {
+                applyBtn.onclick = async function() {
                   if (!confirm("${SUPPORTED_LANG[lang].restoreConfirm || '确定要将笔记恢复到此历史版本吗？当前编辑区内容将被替换。'}")) return;
-                  if (contents) contents.value = snapContent;
-                  if (window.vditorInstance) {
-                    window.vditorInstance.setValue(snapContent);
+                  applyBtn.disabled = true;
+                  try {
+                    const saveResp = await fetch(window.location.pathname, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+                      body: "t=" + encodeURIComponent(snapContent)
+                    });
+                    const saveRes = await saveResp.json();
+                    if (saveRes.err !== 0) {
+                      alert("${lang === 'zh' ? '恢复保存失败: ' : 'Restore save failed: '}" + (saveRes.msg || "unknown"));
+                      return;
+                    }
+                    window._cloudContent = snapContent;
+                    if (contents) contents.value = snapContent;
+                    if (window.vditorInstance) {
+                      window.vditorInstance.setValue(snapContent);
+                    }
+                    window.updateWordCount(snapContent);
+                    if (typeof window.updateToc === "function") {
+                      window.updateToc(snapContent);
+                    }
+                    if (typeof contents.oninput === "function") {
+                      contents.oninput();
+                    } else if (contents) {
+                      contents.dispatchEvent(new Event("input", { bubbles: true }));
+                    }
+                    window.closeHistoryManager();
+                    alert("${SUPPORTED_LANG[lang].restoredMsg || '已恢复到所选历史版本并保存！'}");
+                  } catch (saveErr) {
+                    alert("${lang === 'zh' ? '恢复保存异常: ' : 'Restore error: '}" + saveErr.message);
+                  } finally {
+                    applyBtn.disabled = false;
                   }
-                  window.updateWordCount(snapContent);
-                  if (typeof window.updateToc === "function") {
-                    window.updateToc(snapContent);
-                  }
-                  if (typeof contents.oninput === "function") {
-                    contents.oninput();
-                  } else if (contents) {
-                    contents.dispatchEvent(new Event("input", { bubbles: true }));
-                  }
-                  window.closeHistoryManager();
-                  alert("${SUPPORTED_LANG[lang].restoredMsg || '已恢复到所选历史版本并保存！'}");
                 };
               }
             } else {
@@ -5075,6 +5100,27 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     });
   }
 
+  async function cleanupExpiredShareNote(slug, path, storedSlug) {
+    await deleteShareKeys(slug, path, storedSlug);
+    if (!path) return;
+    try {
+      const { value: expVal, metadata: expMeta } = await queryNote(path);
+      if (expMeta && expMeta.share && (!expMeta.shareSlug || expMeta.shareSlug === (storedSlug || slug))) {
+        await putNote(path, expVal, {
+          ...expMeta,
+          share: false,
+          shareSlug: null,
+          hasSharePw: false,
+          sharePw: "",
+          sharePwText: "",
+          shareTtl: 0,
+          shareExpireAt: 0,
+          shareBurn: false
+        });
+      }
+    } catch (e) {}
+  }
+
   // 6. Share View (/share/:slug)
   async function handleShareView(request, slug, isRaw = false) {
     const lang = getI18n(request);
@@ -5100,23 +5146,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     // Check expiration TTL
     const now = Date.now();
     if (expireAt && now > expireAt) {
-      await deleteShareKeys(slug, path, storedSlug);
-      try {
-        const { value: expVal, metadata: expMeta } = await queryNote(path);
-        if (expMeta && expMeta.share && (!expMeta.shareSlug || expMeta.shareSlug === (storedSlug || slug))) {
-          await putNote(path, expVal, {
-            ...expMeta,
-            share: false,
-            shareSlug: null,
-            hasSharePw: false,
-            sharePw: "",
-            sharePwText: "",
-            shareTtl: 0,
-            shareExpireAt: 0,
-            shareBurn: false
-          });
-        }
-      } catch (e) {}
+      await cleanupExpiredShareNote(slug, path, storedSlug);
       if (wantsRaw) {
         return new Response("404 Share Expired\n", {
           status: 404,
@@ -5239,7 +5269,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
     const shareObj = typeof rawShare === "string" ? { path: rawShare, sharePw: "" } : rawShare;
     if (shareObj.expireAt && Date.now() > shareObj.expireAt) {
-      await deleteShareKeys(slug, shareObj.path, shareObj.slug);
+      await cleanupExpiredShareNote(slug, shareObj.path, shareObj.slug);
       return returnJSON(404, "Share expired");
     }
     const { sharePw } = shareObj;
@@ -6164,8 +6194,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     const invalidSegs = newPath.split("/").some((s) => !s || s === "." || s === "..");
     const reservedPrefixes = ["api", "share", "raw", "list"];
     const firstSeg = newPath.split("/")[0];
-    if (invalidSegs || newPath.includes("//") || reservedPrefixes.includes(firstSeg)) {
-      return returnJSON(400, lang === "zh" ? "目标路径格式不合法或使用了保留前缀 (api/share/raw/list)" : "Invalid or reserved target path");
+    if (invalidSegs || newPath.includes("//") || reservedPrefixes.includes(firstSeg) || /\.md$/i.test(newPath) || /\/(delete|setting|auth|pw)$/i.test("/" + newPath)) {
+      return returnJSON(400, lang === "zh" ? "目标路径格式不合法或使用了保留前缀/后缀 (.md、/delete、/setting、/auth、/pw)" : "Invalid or reserved target path");
     }
 
     try {
