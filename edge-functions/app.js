@@ -6011,6 +6011,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       const usageStr = await kvGet("stat/images_usage_bytes");
       let currentUsage = parseInt(usageStr || "0", 10);
       if (isNaN(currentUsage) || currentUsage < 0) currentUsage = 0;
+      if (list.length === 0 && currentUsage !== 0) {
+        currentUsage = 0;
+        await kvPut("stat/images_usage_bytes", "0");
+      }
 
       return returnJSON(0, {
         images: list,
