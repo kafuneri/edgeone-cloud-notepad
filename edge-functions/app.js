@@ -952,10 +952,11 @@ var SHARE_MGR_MODAL = (lang) => `
             </div>
         </div>
         <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px;">
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
                 <button id="share-mgr-tab-shared" type="button" class="opt-button" style="padding:4px 10px; font-size:12px; background:#0969da; color:#fff; border:1px solid #0969da; cursor:pointer;">${lang === "zh" ? "已分享" : "Shared"}</button>
                 <button id="share-mgr-tab-raw" type="button" class="opt-button" style="padding:4px 10px; font-size:12px; background:#f6f8fa; color:#57606a; border:1px solid #d0d7de; cursor:pointer;">${lang === "zh" ? "Raw公开" : "Raw Public"}</button>
                 <button id="share-mgr-tab-all" type="button" class="opt-button" style="padding:4px 10px; font-size:12px; background:#f6f8fa; color:#57606a; border:1px solid #d0d7de; cursor:pointer;">${lang === "zh" ? "全部笔记" : "All Notes"}</button>
+                <button id="share-mgr-clean-expired" type="button" class="opt-button" style="display:none; padding:4px 10px; font-size:12px; background:#fff8c5; color:#9a6700; border:1px solid #d4a72c; cursor:pointer;">${lang === "zh" ? "清理全部过期 (0)" : "Clean Expired (0)"}</button>
             </div>
             <input type="text" id="share-mgr-search" placeholder="${lang === "zh" ? "搜索笔记路径或短链..." : "Search note path or slug..."}" style="flex:1; min-width:160px; max-width:240px; padding:5px 10px; font-size:12px; border:1px solid #d0d7de; border-radius:6px; outline:none; box-sizing:border-box;" />
         </div>
@@ -1380,6 +1381,21 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       }
       .tree-item:hover .tree-item-actions {
         display: flex;
+      }
+      .tree-item-rename-btn {
+        background: none;
+        border: none;
+        color: #57606a;
+        cursor: pointer;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+      }
+      .tree-item-rename-btn:hover {
+        background: #eaeef2;
+        color: #0969da;
       }
       .tree-item-del-btn {
         background: none;
@@ -2005,6 +2021,19 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         const logoutBtn = document.getElementById("sidebar-logout-btn");
         let allNotes = [];
 
+        function escText(str) {
+          return String(str || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        function encodePathSegments(p) {
+          return String(p || "").split("/").map(function(seg) { return encodeURIComponent(seg); }).join("/");
+        }
+
         function openSidebar() {
           if (sidebar) sidebar.classList.add("active");
           if (overlay) overlay.classList.add("active");
@@ -2112,7 +2141,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               html += '  <div class="tree-folder-title">';
               html += '    <span class="tree-folder-arrow">▼</span>';
               html += '    <svg class="tree-icon" viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75z"></path></svg>';
-              html += '    <span>' + folder.name + '</span>';
+              html += '    <span>' + escText(folder.name) + '</span>';
               html += '  </div>';
               html += '  <div class="tree-folder-content">';
               html += renderNode(folder);
@@ -2123,18 +2152,19 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               const isActive = note.path === currentPath;
               const displayName = note.path.split("/").pop();
               html += '<div class="tree-item ' + (isActive ? 'active' : '') + '">';
-              html += '  <a class="tree-item-text" href="/' + encodeURI(note.path) + '" title="' + note.path + '">';
+              html += '  <a class="tree-item-text" href="/' + encodePathSegments(note.path) + '" title="' + escText(note.path) + '">';
               if (note.share) {
                 html += '    <svg class="tree-icon" viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"></path></svg>';
               } else {
                 html += '    <svg class="tree-icon" viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm7.75 3.25V2.06l2.44 2.44Z"></path></svg>';
               }
-              html += displayName;
+              html += escText(displayName);
               if (note.locked) {
                 html += '    <svg viewBox="0 0 16 16" width="12" height="12" fill="#9a6700" style="margin-left:auto; flex-shrink:0;" title="${lang === "zh" ? "已锁定" : "Locked"}"><path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z"></path></svg>';
               }
               html += '  </a>';
               html += '  <div class="tree-item-actions">';
+              html += '    <button class="tree-item-rename-btn" data-path="' + encodeURIComponent(note.path) + '" title="${lang === "zh" ? "重命名 / 移动路径" : "Rename / Move"}"><svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61Zm.176 4.823L9.75 4.81l-6.286 6.287a.253.253 0 0 0-.064.108l-.558 1.953 1.953-.558a.253.253 0 0 0 .108-.064Zm1.238-3.763a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354Z"></path></svg></button>';
               html += '    <button class="tree-item-del-btn" data-path="' + encodeURIComponent(note.path) + '" title="${SUPPORTED_LANG[lang].delete}">✕</button>';
               html += '  </div>';
               html += '</div>';
@@ -2148,6 +2178,13 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         // Tree click event delegation (folder collapse & note deletion)
         if (treeContainer) {
           treeContainer.onclick = function(e) {
+            const renameBtn = e.target.closest(".tree-item-rename-btn");
+            if (renameBtn) {
+              e.preventDefault();
+              e.stopPropagation();
+              window.renameNote(renameBtn.dataset.path, e);
+              return;
+            }
             const delBtn = e.target.closest(".tree-item-del-btn");
             if (delBtn) {
               e.preventDefault();
@@ -2165,14 +2202,56 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           };
         }
 
+        window.renameNote = async function(encodedPath, e) {
+          if (e) e.stopPropagation();
+          const oldPath = decodeURIComponent(encodedPath);
+          const curPath = decodeURIComponent(window.location.pathname.replace(new RegExp('^/+', 'g'), ''));
+          const targetNote = allNotes.find(function(n) { return n.path === oldPath; });
+          if ((targetNote && targetNote.locked) || (oldPath === curPath && typeof isNoteLocked !== "undefined" && isNoteLocked)) {
+            alert("${lang === 'zh' ? '笔记已锁定，请先解锁后再重命名或移动' : 'Note is locked. Please unlock it first.'}");
+            return;
+          }
+          const nextInput = prompt("${lang === 'zh' ? '请输入新的笔记路径（使用 / 可移动文件夹，如：学习笔记/新名称）：' : 'Enter new note path (use / for folders):'}", oldPath);
+          if (nextInput === null) return;
+          const newPath = nextInput.trim().replace(new RegExp('^/+|/+$', 'g'), '');
+          if (!newPath || newPath === oldPath) return;
+
+          try {
+            const res = await fetch("/api/notes/rename", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ oldPath: oldPath, newPath: newPath })
+            });
+            const data = await res.json();
+            if (data.err === 0) {
+              if (curPath === oldPath) {
+                window.location.href = "/" + encodePathSegments(data.data.newPath);
+              } else {
+                loadNotes();
+                if (typeof loadShareManagerList === "function") loadShareManagerList(false);
+              }
+            } else {
+              alert(data.msg || "${lang === 'zh' ? '重命名失败' : 'Rename failed'}");
+            }
+          } catch (err) {
+            alert("${lang === 'zh' ? '重命名异常: ' : 'Rename error: '}" + err.message);
+          }
+        };
+
         window.deleteNote = async function(encodedPath, e) {
           if (e) e.stopPropagation();
           const path = decodeURIComponent(encodedPath);
+          const curPath = decodeURIComponent(window.location.pathname.replace(new RegExp('^/+', 'g'), ''));
+          const targetNote = allNotes.find(function(n) { return n.path === path; });
+          if ((targetNote && targetNote.locked) || (path === curPath && typeof isNoteLocked !== "undefined" && isNoteLocked)) {
+            alert("${lang === 'zh' ? '笔记已锁定，请先解锁后再删除' : 'Note is locked. Please unlock it before deleting.'}");
+            return;
+          }
           const confirmMsg = "${lang === 'zh' ? '确定要永久删除笔记【' : 'Permanently delete note: '}" + path + "${lang === 'zh' ? '】吗？此操作无法撤销！' : '?' }";
           if (!confirm(confirmMsg)) return;
 
           try {
-            const res = await fetch("/" + encodeURI(path) + "/delete", { method: "POST" });
+            const res = await fetch("/" + encodePathSegments(path) + "/delete", { method: "POST" });
             const data = await res.json();
             if (data.err === 0) {
               const currentPath = decodeURIComponent(window.location.pathname.replace(new RegExp('^/+', 'g'), ''));
@@ -2364,6 +2443,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         }
 
         let isNoteLocked = ${JSON.stringify(!!ext.locked)};
+        let isNoteShared = ${JSON.stringify(!!ext.share)};
+        let isNoteRawPublic = ${JSON.stringify(!!ext.rawPublic)};
         const LOCK_SVG_CLOSED = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z"></path></svg>';
         const LOCK_SVG_OPEN = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M5.5 4a2.5 2.5 0 0 1 4.607-1.346.75.75 0 1 0 1.264-.808A4 4 0 0 0 4 4v2h-.25C2.784 6 2 6.784 2 7.75v5.5C2 14.216 2.784 15 3.75 15h8.5a1.75 1.75 0 0 0 1.75-1.75v-5.5A1.75 1.75 0 0 0 12.25 6H5.5Zm6.75 3.5a.25.25 0 0 1 .25.25v5.5a.25.25 0 0 1-.25.25h-8.5a.25.25 0 0 1-.25-.25v-5.5a.25.25 0 0 1 .25-.25Z"></path></svg>';
 
@@ -2414,7 +2495,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             shareModal.style.display = "block";
             const errBox = document.getElementById("share-error-msg");
             if (errBox) { errBox.style.display = "none"; errBox.textContent = ""; }
-            if (shareCustomSlug) shareCustomSlug.style.borderColor = "#d0d7de";
+            if (shareCustomSlug) {
+              shareCustomSlug.style.borderColor = "#d0d7de";
+              if (!shareCustomSlug.value.trim()) {
+                shareCustomSlug.value = genRandomAlnum(6);
+              }
+            }
             syncSharePwMode();
             const currentSlug = shareCustomSlug.value.trim() || ${JSON.stringify(ext.shareSlug || "")};
             if (currentSlug) {
@@ -2483,6 +2569,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           if (lockBtn) {
             lockBtn.onclick = async function() {
               const nextLocked = !isNoteLocked;
+              if (nextLocked && (isNoteShared || isNoteRawPublic)) {
+                alert("${lang === 'zh' ? '该笔记当前正在对外分享/Raw公开，请先关闭分享后再锁定' : 'This note is currently shared or Raw public. Please disable sharing first.'}");
+                return;
+              }
               lockBtn.disabled = true;
               try {
                 const res = await fetch(window.location.pathname + "/setting", {
@@ -2515,7 +2605,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 alert("${lang === 'zh' ? '笔记已锁定，请先解锁后再分享' : 'Note is locked. Please unlock it first.'}");
                 return;
               }
-              const slug = shareCustomSlug.value.trim();
+              let slug = shareCustomSlug.value.trim();
+              if (!slug) {
+                slug = genRandomAlnum(6);
+                shareCustomSlug.value = slug;
+              }
               const noPw = noPwCb ? noPwCb.checked : false;
               let pw = noPw ? "" : shareCustomPw.value.trim();
               if (!noPw && !pw) {
@@ -2547,10 +2641,13 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 saveShareBtn.innerText = "${SUPPORTED_LANG[lang].saveShare}";
                 if (data.err === 0) {
                   const finalSlug = (data.data && data.data.slug) || slug;
+                  isNoteShared = true;
+                  if (typeof rawPub === "boolean") isNoteRawPublic = rawPub;
                   shareCustomSlug.value = finalSlug;
                   shareFinalUrl.value = buildShareUrlWithPw(finalSlug, pw);
                   shareLinkBox.style.display = "block";
                   updateShareBadges(ttl, burn);
+                  if (typeof loadNotes === "function") loadNotes();
                   if (typeof loadShareManagerList === "function") loadShareManagerList(false);
                   saveShareBtn.innerText = "${lang === 'zh' ? '已生成' : 'Saved'}";
                   setTimeout(function() {
@@ -2592,12 +2689,15 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 });
                 const data = await res.json();
                 if (data.err === 0) {
+                  isNoteShared = false;
                   shareLinkBox.style.display = "none";
                   shareCustomSlug.value = "";
                   shareCustomPw.value = "";
+                  if (noPwCb) noPwCb.checked = false;
                   if (shareCustomTtl) shareCustomTtl.value = "0";
                   if (shareBurnCheckbox) shareBurnCheckbox.checked = false;
                   if (shareBadgesWrap) shareBadgesWrap.innerHTML = "";
+                  if (typeof loadNotes === "function") loadNotes();
                   if (typeof loadShareManagerList === "function") loadShareManagerList(false);
                   alert("${lang === 'zh' ? '已关闭对外分享' : 'Sharing disabled'}");
                   closeShareModal();
@@ -2626,7 +2726,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               });
               const data = await res.json();
               if (data.err === 0) {
+                isNoteRawPublic = nextVal;
                 syncRawBoxUI(nextVal);
+                if (typeof loadNotes === "function") loadNotes();
+                if (typeof loadShareManagerList === "function") loadShareManagerList(false);
               } else {
                 syncRawBoxUI(!nextVal);
                 alert(data.msg || "更新 Raw 公开状态失败");
@@ -2726,19 +2829,6 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         let shareMgrItems = [];
         let shareMgrTab = "shared";
         const shareMgrCollapsed = new Set();
-
-        function escText(str) {
-          return String(str || "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#39;");
-        }
-
-        function encodePathSegments(p) {
-          return String(p || "").split("/").map(function(seg) { return encodeURIComponent(seg); }).join("/");
-        }
 
         function updateShareMgrTabsUI() {
           const tabs = [
@@ -2857,6 +2947,16 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           const now = Date.now();
           const sharedItems = shareMgrItems.filter(function(item) { return !!item.share; });
           const rawItems = shareMgrItems.filter(function(item) { return !!item.rawPublic; });
+          const expiredItems = shareMgrItems.filter(function(item) { return !!(item.share && item.shareExpireAt && now > item.shareExpireAt); });
+          const cleanExpBtn = document.getElementById("share-mgr-clean-expired");
+          if (cleanExpBtn) {
+            if (expiredItems.length > 0) {
+              cleanExpBtn.style.display = "inline-block";
+              cleanExpBtn.textContent = "${lang === 'zh' ? '清理全部过期' : 'Clean Expired'} (" + expiredItems.length + ")";
+            } else {
+              cleanExpBtn.style.display = "none";
+            }
+          }
           if (shareMgrCountBadge) {
             if (shareMgrTab === "shared") shareMgrCountBadge.textContent = String(sharedItems.length) + " / " + String(shareMgrItems.length);
             else if (shareMgrTab === "raw") shareMgrCountBadge.textContent = String(rawItems.length) + " / " + String(shareMgrItems.length);
@@ -2994,6 +3094,44 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             renderShareMgrList();
           };
         }
+        const shareMgrCleanExpiredBtn = document.getElementById("share-mgr-clean-expired");
+        if (shareMgrCleanExpiredBtn) {
+          shareMgrCleanExpiredBtn.onclick = async function() {
+            const now = Date.now();
+            const expiredItems = shareMgrItems.filter(function(item) { return !!(item.share && item.shareExpireAt && now > item.shareExpireAt); });
+            if (expiredItems.length === 0) return;
+            if (!confirm("${lang === 'zh' ? '确定要一键关闭并清理全部 ' : 'Disable and clean all '}" + expiredItems.length + "${lang === 'zh' ? ' 个过期分享吗？' : ' expired shares?'}")) return;
+            shareMgrCleanExpiredBtn.disabled = true;
+            shareMgrCleanExpiredBtn.textContent = "${lang === 'zh' ? '清理中...' : 'Cleaning...'}";
+            try {
+              const curPath = decodeURIComponent(window.location.pathname.replace(new RegExp("^/+|/+$", "g"), ""));
+              for (let i = 0; i < expiredItems.length; i++) {
+                const it = expiredItems[i];
+                const resp = await fetch("/" + encodePathSegments(it.path) + "/setting", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ share: false })
+                });
+                const rJson = await resp.json();
+                if (rJson.err === 0 && curPath === it.path) {
+                  isNoteShared = false;
+                  if (shareLinkBox) shareLinkBox.style.display = "none";
+                  if (shareCustomSlug) shareCustomSlug.value = "";
+                  if (shareCustomPw) shareCustomPw.value = "";
+                  const noPwEl = document.getElementById("share-no-pw");
+                  if (noPwEl) noPwEl.checked = false;
+                  if (shareBadgesWrap) shareBadgesWrap.innerHTML = "";
+                }
+              }
+              await loadShareManagerList(true);
+              if (typeof loadNotes === "function") loadNotes();
+            } catch (err) {
+              alert("${lang === 'zh' ? '清理异常: ' : 'Clean error: '}" + err.message);
+            } finally {
+              shareMgrCleanExpiredBtn.disabled = false;
+            }
+          };
+        }
         if (shareMgrSearch) {
           shareMgrSearch.oninput = function() { renderShareMgrList(); };
         }
@@ -3033,11 +3171,16 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 const res = await resp.json();
                 if (res.err === 0) {
                   if (curPath === targetPath) {
+                    isNoteShared = false;
                     if (shareLinkBox) shareLinkBox.style.display = "none";
                     if (shareCustomSlug) shareCustomSlug.value = "";
+                    if (shareCustomPw) shareCustomPw.value = "";
+                    const noPwEl = document.getElementById("share-no-pw");
+                    if (noPwEl) noPwEl.checked = false;
                     if (shareBadgesWrap) shareBadgesWrap.innerHTML = "";
                   }
                   await loadShareManagerList(false);
+                  if (typeof loadNotes === "function") loadNotes();
                 } else {
                   alert(res.msg || "操作失败");
                   btn.disabled = false;
@@ -3063,9 +3206,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 const res = await resp.json();
                 if (res.err === 0) {
                   if (curPath === targetPath) {
+                    isNoteRawPublic = nextRaw;
                     syncRawBoxUI(nextRaw);
                   }
                   await loadShareManagerList(false);
+                  if (typeof loadNotes === "function") loadNotes();
                 } else {
                   alert(res.msg || "操作失败");
                   btn.disabled = false;
@@ -4956,6 +5101,22 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     const now = Date.now();
     if (expireAt && now > expireAt) {
       await deleteShareKeys(slug, path, storedSlug);
+      try {
+        const { value: expVal, metadata: expMeta } = await queryNote(path);
+        if (expMeta && expMeta.share && (!expMeta.shareSlug || expMeta.shareSlug === (storedSlug || slug))) {
+          await putNote(path, expVal, {
+            ...expMeta,
+            share: false,
+            shareSlug: null,
+            hasSharePw: false,
+            sharePw: "",
+            sharePwText: "",
+            shareTtl: 0,
+            shareExpireAt: 0,
+            shareBurn: false
+          });
+        }
+      } catch (e) {}
       if (wantsRaw) {
         return new Response("404 Share Expired\n", {
           status: 404,
@@ -5033,6 +5194,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           shareSlug: null,
           hasSharePw: false,
           sharePw: "",
+          sharePwText: "",
+          shareTtl: 0,
+          shareExpireAt: 0,
           shareBurn: false
         });
       } catch (e) {
@@ -5132,6 +5296,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       if (metadata.pw && !valid) {
         return returnJSON(403, "Protected note: password required to delete.");
       }
+    }
+
+    if (metadata && metadata.locked) {
+      const lang = getI18n(request);
+      return returnJSON(423, lang === "zh" ? "笔记已锁定，请先解锁后再删除" : "Note is locked. Please unlock it before deleting.");
     }
 
     try {
@@ -5259,13 +5428,18 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       if (ADMIN_PASSWORD || !metadata.pw || valid) {
         try {
           const md5 = await MD5(path);
-          let slug = metadata.shareSlug || md5;
+          let slug = metadata.shareSlug || "";
           const baseMeta = {
             ...metadata,
             ...mode !== void 0 && { mode },
             ...typeof rawPublic === "boolean" && { rawPublic },
             ...typeof locked === "boolean" && { locked }
           };
+
+          if (locked === true && (baseMeta.share || baseMeta.rawPublic)) {
+            const lang = getI18n(request);
+            return returnJSON(409, lang === "zh" ? "该笔记当前正在对外分享/Raw公开，请先关闭分享后再锁定" : "Disable share and Raw public before locking this note.");
+          }
 
           if ((share === true || rawPublic === true) && baseMeta.locked) {
             const lang = getI18n(request);
@@ -5275,7 +5449,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           if (share === true) {
             const lang = getI18n(request);
             slug = (shareSlug || slug).trim().replace(/^\/+|\/+$/g, "");
-            if (!slug) slug = md5;
+            if (!slug) {
+              const chars = "23456789abcdefghjkmnpqrstuvwxyz";
+              for (let i = 0; i < 6; i++) slug += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
             if (slug.includes("/")) {
               return returnJSON(400, lang === "zh" ? "分享路径不能包含 /" : "Share slug cannot contain '/'");
             }
@@ -5318,9 +5495,6 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
             const putOpts = ttlSec > 0 ? { expirationTtl: ttlSec } : {};
             await kvPut(`share/${slug}`, shareData, putOpts);
-            if (slug !== md5) {
-              await kvPut(`share/${md5}`, shareData, putOpts);
-            }
             await putNote(path, value, {
               ...baseMeta,
               share: true,
@@ -5964,6 +6138,93 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
   }
 
+  // 16. Note Rename / Move Folder (POST /api/notes/rename)
+  async function handleNoteRename(request) {
+    const lang = getI18n(request);
+    if (ADMIN_PASSWORD) {
+      const isAdmin = await checkAdminAuth(request);
+      if (!isAdmin) return returnJSON(401, "Unauthorized");
+    }
+
+    let body = {};
+    try {
+      body = await request.json();
+    } catch (e) {
+      return returnJSON(400, "Expected JSON body");
+    }
+
+    const oldPath = String(body.oldPath || "").trim().replace(/^\/+|\/+$/g, "");
+    const newPath = String(body.newPath || "").trim().replace(/^\/+|\/+$/g, "");
+    if (!oldPath || !newPath) {
+      return returnJSON(400, lang === "zh" ? "原路径或新路径不能为空" : "Missing oldPath or newPath");
+    }
+    if (oldPath === newPath) {
+      return returnJSON(400, lang === "zh" ? "新路径与原路径相同" : "New path is identical to old path");
+    }
+    const invalidSegs = newPath.split("/").some((s) => !s || s === "." || s === "..");
+    const reservedPrefixes = ["api", "share", "raw", "list"];
+    const firstSeg = newPath.split("/")[0];
+    if (invalidSegs || newPath.includes("//") || reservedPrefixes.includes(firstSeg)) {
+      return returnJSON(400, lang === "zh" ? "目标路径格式不合法或使用了保留前缀 (api/share/raw/list)" : "Invalid or reserved target path");
+    }
+
+    try {
+      const oldNote = await store.get(`notes/${oldPath}`, { type: "json", consistency: "strong" });
+      if (!oldNote) {
+        return returnJSON(404, lang === "zh" ? "原笔记不存在" : "Source note not found");
+      }
+      const oldMeta = oldNote.metadata || {};
+      if (oldMeta.locked) {
+        return returnJSON(423, lang === "zh" ? "笔记已锁定，请先解锁后再重命名或移动" : "Note is locked. Please unlock it first.");
+      }
+
+      const targetExisting = await store.get(`notes/${newPath}`, { type: "json", consistency: "strong" });
+      if (targetExisting) {
+        return returnJSON(409, lang === "zh" ? `目标路径 "${newPath}" 已存在笔记，请更换名称` : `Target path "${newPath}" already exists`);
+      }
+
+      await putNote(newPath, oldNote.value || "", oldMeta);
+      await store.delete(`notes/${oldPath}`);
+      await removeNoteIndex(oldPath);
+
+      if (oldMeta.share && oldMeta.shareSlug) {
+        try {
+          const shareObj = await kvGet(`share/${oldMeta.shareSlug}`, "json");
+          if (shareObj && typeof shareObj === "object") {
+            const remTtl = shareObj.expireAt ? Math.max(1, Math.ceil((shareObj.expireAt - Date.now()) / 1000)) : 0;
+            const putOpts = remTtl > 0 ? { expirationTtl: remTtl } : {};
+            await kvPut(`share/${oldMeta.shareSlug}`, { ...shareObj, path: newPath }, putOpts);
+          }
+        } catch (e) {}
+      }
+
+      try {
+        const oldHistKey = `hist/${encodeURIComponent(oldPath)}`;
+        const newHistKey = `hist/${encodeURIComponent(newPath)}`;
+        const histList = await kvGet(oldHistKey, "json");
+        if (Array.isArray(histList) && histList.length > 0) {
+          for (const h of histList) {
+            if (h && h.id) {
+              const oldSnapKey = `history/${encodeURIComponent(oldPath)}/${h.id}`;
+              const newSnapKey = `history/${encodeURIComponent(newPath)}/${h.id}`;
+              const snap = await store.get(oldSnapKey, { type: "json", consistency: "strong" });
+              if (snap) {
+                await store.setJSON(newSnapKey, snap);
+                await store.delete(oldSnapKey);
+              }
+            }
+          }
+          await kvPut(newHistKey, histList);
+          await kvDelete(oldHistKey);
+        }
+      } catch (e) {}
+
+      return returnJSON(0, { oldPath, newPath });
+    } catch (err) {
+      return returnJSON(500, "Rename failed: " + (err?.message || String(err)));
+    }
+  }
+
   // Main dispatcher - zero complex regexes, 100% EdgeOne compliant
   async function route(request) {
     const url = new URL(request.url);
@@ -5984,6 +6245,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
     if (method === "GET" && pathname === "/api/notes") {
       return handleNotes(request);
+    }
+    if (method === "POST" && pathname === "/api/notes/rename") {
+      return handleNoteRename(request);
     }
     if (method === "GET" && pathname === "/api/shares") {
       return handleShares(request);
