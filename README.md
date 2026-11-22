@@ -1,4 +1,4 @@
-# ☁️ EdgeOne Cloud Notepad (云笔记 EdgeOne 版)
+# EdgeOne Cloud Notepad (云笔记 EdgeOne 版)
 
 基于 **Tencent Cloud EdgeOne Makers (Pages)** 全栈无服务器架构、**EdgeOne Blob 存储** 与 **KV 存储** 打造的极速无服务器云笔记。
 
@@ -18,7 +18,7 @@
 
 ---
 
-## 🛠️ 技术架构
+##  技术架构
 
 * **运行环境**：Tencent Cloud EdgeOne Makers (Edge Functions / V8 边缘运行时)
 * **存储后端**：EdgeOne Blob 存储（`@edgeone/pages-blob`）+ EdgeOne KV（`notepad_kv`，自动降级兼容 Blob）
@@ -66,10 +66,10 @@
 
 ---
 
-## 📄 开源许可
+##  开源许可
 
 本项目遵循 [MIT License](LICENSE) 许可协议。
 
-## 🙏 致谢
+##  致谢
 
 - 本项目源自对 [s0urcelab/serverless-cloud-notepad](https://github.com/s0urcelab/serverless-cloud-notepad) 的修改与重构
