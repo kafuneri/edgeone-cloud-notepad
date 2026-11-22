@@ -793,6 +793,12 @@ const store = new Proxy({}, {
         </div>
     </div>
 `;
+var escapeHtml = (str) => String(str ?? "")
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;")
+  .replace(/'/g, "&#39;");
 var MODAL = (lang, ext = {}) => `
 <div class="modal share-modal">
     <div class="modal-mask"></div>
@@ -804,7 +810,7 @@ var MODAL = (lang, ext = {}) => `
           <label style="display: block; font-size: 12px; color: #57606a; margin-bottom: 5px; font-weight: 500;">${SUPPORTED_LANG[lang].shareSlugLabel}</label>
           <div style="display: flex; align-items: center;">
             <span style="font-size: 13px; color: #6e7781; background: #f6f8fa; padding: 7px 10px; border: 1px solid #d0d7de; border-right: none; border-radius: 6px 0 0 6px;">/share/</span>
-            <input type="text" id="share-custom-slug" value="${ext.shareSlug || ""}" placeholder="自定义短链后缀" style="flex: 1; padding: 7px 10px; border: 1px solid #d0d7de; border-radius: 0 6px 6px 0; font-size: 13px; outline: none;" />
+            <input type="text" id="share-custom-slug" value="${escapeHtml(ext.shareSlug || "")}" placeholder="自定义短链后缀" style="flex: 1; padding: 7px 10px; border: 1px solid #d0d7de; border-radius: 0 6px 6px 0; font-size: 13px; outline: none;" />
           </div>
         </div>
 
@@ -956,7 +962,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${title} — Cloud Notepad</title>
+    <title>${escapeHtml(title)} — Cloud Notepad</title>
     <link href="${CDN_PREFIX}/favicon.ico" rel="shortcut icon" type="image/ico" />
     <link href="${CDN_PREFIX}/css/app.min.css" rel="stylesheet" media="screen" />
     ${isEdit && isMdMode ? `<link href="//gcore.jsdelivr.net/npm/vditor@3.10.8/dist/index.css" rel="stylesheet" />` : ""}
@@ -1736,7 +1742,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             <div class="layer_1">
                 <div class="layer_2">
                     <div class="layer_3">
-                        <textarea id="contents" class="contents full-width ${isEdit && !isMdMode ? "" : "hide"}" spellcheck="true" placeholder="${SUPPORTED_LANG[lang].emptyPH}">${content}</textarea>
+                        <textarea id="contents" class="contents full-width ${isEdit && !isMdMode ? "" : "hide"}" spellcheck="true" placeholder="${SUPPORTED_LANG[lang].emptyPH}">${escapeHtml(content || "")}</textarea>
                         ${isEdit && isMdMode ? `<div id="vditor" class="contents full-width"></div>` : ""}
                         ${!isEdit && isMdMode ? `<div id="preview-md" class="contents full-width"></div>` : ""}
                         ${!isEdit && !isMdMode ? `<div id="preview-plain" class="contents full-width"></div>` : ""}
@@ -3181,7 +3187,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${title} — 访问密码</title>
+  <title>${escapeHtml(title)} — 访问密码</title>
   <style>
     body {
       background: #f4f6f8;
@@ -3486,6 +3492,22 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
   }
 
+  function isHttpsRequest(request) {
+    try {
+      const origin = (request.headers.get("origin") || "").toLowerCase();
+      if (origin.startsWith("http://")) return false;
+      const host = (request.headers.get("host") || "").toLowerCase();
+      if (host === "localhost" || host.startsWith("localhost:") || host === "127.0.0.1" || host.startsWith("127.0.0.1:")) {
+        return false;
+      }
+      const proto = request.headers.get("x-forwarded-proto") || "";
+      if (proto.split(",")[0].trim().toLowerCase() === "https") return true;
+      return new URL(request.url).protocol === "https:";
+    } catch (e) {
+      return false;
+    }
+  }
+
   function getClientIp(request) {
     return request.headers.get("eo-client-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown_ip";
   }
@@ -3698,7 +3720,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           path: "/",
           expires: (0, import_dayjs2.default)().add(30, "day").toDate(),
           httpOnly: true,
-          sameSite: "lax"
+          sameSite: "lax",
+          secure: isHttpsRequest(request)
         })
       });
     } catch (e) {
@@ -3713,7 +3736,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         path: "/",
         expires: (0, import_dayjs2.default)().subtract(100, "day").toDate(),
         httpOnly: true,
-        sameSite: "lax"
+        sameSite: "lax",
+        secure: isHttpsRequest(request)
       })
     });
   }
@@ -3778,7 +3802,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
     const rows = noteList.map((item) => `
       <tr>
-        <td><a href="/${encodeURI(item.path)}">${item.path}</a></td>
+        <td><a href="/${encodeURI(item.path)}">${escapeHtml(item.path)}</a></td>
         <td>${item.updateAt ? (0, import_dayjs.default)(item.updateAt * 1e3).format("YYYY-MM-DD HH:mm:ss") : "-"}</td>
       </tr>
     `).join("");
@@ -3995,7 +4019,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         "Set-Cookie": import_cookie.default.serialize(cookieKey, token, {
           path: `/share/${encodeURI(slug)}`,
           expires: (0, import_dayjs2.default)().add(7, "day").toDate(),
-          httpOnly: true
+          httpOnly: true,
+          sameSite: "lax",
+          secure: isHttpsRequest(request)
         })
       });
     }
@@ -4082,7 +4108,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         "Set-Cookie": import_cookie.default.serialize("auth", token, {
           path: `/${encodeURI(path)}`,
           expires: (0, import_dayjs2.default)().add(7, "day").toDate(),
-          httpOnly: true
+          httpOnly: true,
+          sameSite: "lax",
+          secure: isHttpsRequest(request)
         })
       });
     }
@@ -4115,7 +4143,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             "Set-Cookie": import_cookie.default.serialize("auth", "", {
               path: `/${encodeURI(path)}`,
               expires: (0, import_dayjs2.default)().subtract(100, "day").toDate(),
-              httpOnly: true
+              httpOnly: true,
+              sameSite: "lax",
+              secure: isHttpsRequest(request)
             })
           });
         } catch (error) {
