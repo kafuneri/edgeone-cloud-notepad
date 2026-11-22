@@ -1117,7 +1117,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         background: transparent !important;
       }
       .vditor-ir pre.vditor-reset {
-        padding: 0 10px !important;
+        padding: 0 10px 80px 10px !important;
         font-family: Arial, Helvetica, sans-serif !important;
         font-size: 15px !important;
         line-height: 1.7 !important;
@@ -1437,8 +1437,13 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         padding-bottom: 85px !important;
         box-sizing: border-box !important;
       }
-      .stack .layer_1 .layer_2 .layer_3 .contents {
+      .stack .layer_1 .layer_2 .layer_3 .contents:not(#vditor) {
         padding-bottom: 70px !important;
+        box-sizing: border-box !important;
+      }
+      .stack .layer_1 .layer_2 .layer_3 #vditor.contents {
+        padding: 0 !important;
+        overflow: hidden !important;
         box-sizing: border-box !important;
       }
       #preview-md, #preview-plain {
@@ -1519,10 +1524,19 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           padding: 16px 14px 0 14px !important;
           box-sizing: border-box !important;
         }
-        .stack .layer_1 .layer_2 .layer_3 .contents {
+        .stack .layer_1 .layer_2 .layer_3 .contents:not(#vditor) {
           height: calc(100vh - 65px) !important;
           padding-bottom: 95px !important;
           box-sizing: border-box !important;
+        }
+        .stack .layer_1 .layer_2 .layer_3 #vditor.contents {
+          height: calc(100vh - 65px) !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+          box-sizing: border-box !important;
+        }
+        .vditor-ir pre.vditor-reset {
+          padding-bottom: 95px !important;
         }
         #preview-md, #preview-plain {
           min-height: calc(100vh - 65px) !important;
@@ -1685,6 +1699,118 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       .sidebar-export-btn:active {
         background: #ebedf0 !important;
       }
+
+      /* Lightweight Collapsible Edit Toolbar */
+      .edit-toolbar-wrap {
+        position: fixed;
+        top: 14px;
+        left: 54px;
+        right: 92px;
+        z-index: 98;
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        pointer-events: none;
+      }
+      .edit-toolbar-wrap.no-sidebar {
+        left: 14px;
+      }
+      .edit-toolbar-toggle {
+        pointer-events: auto;
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #d0d7de;
+        color: #57606a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        padding: 0;
+      }
+      .edit-toolbar-toggle:hover {
+        background: #ffffff;
+        color: #1f2328;
+        border-color: #8c959f;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      }
+      .edit-toolbar-toggle.active {
+        background: #f0f6fc;
+        color: #0969da;
+        border-color: #0969da;
+      }
+      .edit-toolbar-bar {
+        pointer-events: auto;
+        display: none;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 3px 5px;
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid #d0d7de;
+        border-radius: 8px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      .edit-toolbar-bar.open {
+        display: flex;
+        animation: tocSlideDown 0.15s ease-out;
+      }
+      .etb-btn {
+        height: 26px;
+        min-width: 26px;
+        padding: 0 7px;
+        border: 1px solid #d0d7de;
+        border-radius: 5px;
+        background: #ffffff;
+        color: #24292f;
+        font-size: 12px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.15s ease;
+        flex-shrink: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      .etb-btn:hover {
+        background: #f6f8fa;
+        border-color: #8c959f;
+        color: #0969da;
+      }
+      .etb-btn:active {
+        background: #eaeef2;
+      }
+      @media screen and (max-width: 768px) {
+        .edit-toolbar-wrap {
+          right: auto;
+        }
+        .edit-toolbar-bar {
+          position: fixed;
+          top: 52px;
+          left: 14px;
+          right: 14px;
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+          padding: 5px 6px;
+          z-index: 992;
+        }
+        .edit-toolbar-bar::-webkit-scrollbar {
+          display: none;
+        }
+      }
     </style>
 </head>
 <body>
@@ -1725,6 +1851,46 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           </div>
         </div>
         ${isPrivateMode ? `<button id="sidebar-logout-btn" class="sidebar-logout-btn">${SUPPORTED_LANG[lang].logout}</button>` : ""}
+      </div>
+    </div>
+    ` : ""}
+
+    ${isEdit ? `
+    <!-- Lightweight Collapsible Edit Toolbar (collapsed by default) -->
+    <div id="edit-toolbar-wrap" class="edit-toolbar-wrap ${isPrivateMode ? "" : "no-sidebar"}">
+      <button id="edit-toolbar-toggle" type="button" class="edit-toolbar-toggle" title="${lang === "zh" ? "编辑格式工具栏" : "Format Toolbar"}" aria-expanded="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+      </button>
+      <div id="edit-toolbar-bar" class="edit-toolbar-bar" role="toolbar" aria-label="${lang === "zh" ? "编辑菜单栏" : "Edit Toolbar"}">
+        <button type="button" class="etb-btn" data-md="bold" title="${lang === "zh" ? "加粗" : "Bold"}"><strong style="font-weight:700;">B</strong></button>
+        <button type="button" class="etb-btn" data-md="italic" title="${lang === "zh" ? "斜体" : "Italic"}"><em style="font-style:italic;font-family:Georgia,serif;">I</em></button>
+        <button type="button" class="etb-btn" data-md="h3" title="${lang === "zh" ? "三级标题" : "Heading 3"}"><span style="font-weight:600;">H3</span></button>
+        <button type="button" class="etb-btn" data-md="quote" title="${lang === "zh" ? "引用" : "Quote"}"><span style="font-weight:700;font-family:Georgia,serif;font-size:14px;">&rdquo;</span></button>
+        <button type="button" class="etb-btn" data-md="code" title="${lang === "zh" ? "行内代码" : "Inline Code"}"><span style="font-family:monospace;font-weight:600;font-size:11px;">&lt;/&gt;</span></button>
+        <button type="button" class="etb-btn" data-md="codeblock" title="${lang === "zh" ? "代码块" : "Code Block"}"><span style="font-family:monospace;font-weight:600;font-size:11px;">{}</span></button>
+        <button type="button" class="etb-btn" data-md="ul" title="${lang === "zh" ? "无序列表" : "Bullet List"}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"></line><line x1="9" y1="12" x2="20" y2="12"></line><line x1="9" y1="18" x2="20" y2="18"></line><circle cx="4" cy="6" r="1.2" fill="currentColor"></circle><circle cx="4" cy="12" r="1.2" fill="currentColor"></circle><circle cx="4" cy="18" r="1.2" fill="currentColor"></circle></svg>
+          <span>${lang === "zh" ? "列表" : "List"}</span>
+        </button>
+        <button type="button" class="etb-btn" data-md="task" title="${lang === "zh" ? "任务列表" : "Task List"}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+          <span>${lang === "zh" ? "任务" : "Task"}</span>
+        </button>
+        <button type="button" class="etb-btn" data-md="link" title="${lang === "zh" ? "插入链接" : "Link"}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+          <span>${lang === "zh" ? "链接" : "Link"}</span>
+        </button>
+        <button type="button" class="etb-btn" data-md="image" title="${lang === "zh" ? "插入图片" : "Image"}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+          <span>${lang === "zh" ? "图片" : "Image"}</span>
+        </button>
+        <button type="button" class="etb-btn" data-md="table" title="${lang === "zh" ? "插入表格" : "Table"}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+          <span>${lang === "zh" ? "表格" : "Table"}</span>
+        </button>
       </div>
     </div>
     ` : ""}
@@ -3065,6 +3231,188 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             });
             previewObserver.observe(previewMd, { childList: true, subtree: true });
           } catch(e) {}
+        }
+
+        // --- 5. Lightweight Collapsible Edit Toolbar ---
+        const etbToggle = document.getElementById("edit-toolbar-toggle");
+        const etbBar = document.getElementById("edit-toolbar-bar");
+        if (etbToggle && etbBar) {
+          function setToolbarOpen(open) {
+            if (open) {
+              etbBar.classList.add("open");
+              etbToggle.classList.add("active");
+              etbToggle.setAttribute("aria-expanded", "true");
+            } else {
+              etbBar.classList.remove("open");
+              etbToggle.classList.remove("active");
+              etbToggle.setAttribute("aria-expanded", "false");
+            }
+          }
+
+          // Prevent stealing editor focus/selection when clicking toolbar buttons
+          etbToggle.addEventListener("mousedown", function(e) { e.preventDefault(); });
+          etbBar.addEventListener("mousedown", function(e) {
+            if (e.target && e.target.closest(".etb-btn")) {
+              e.preventDefault();
+            }
+          });
+
+          etbToggle.addEventListener("click", function(e) {
+            e.stopPropagation();
+            setToolbarOpen(!etbBar.classList.contains("open"));
+          });
+
+          document.addEventListener("keydown", function(e) {
+            if (e.key === "Escape" && etbBar.classList.contains("open")) {
+              setToolbarOpen(false);
+            }
+          });
+
+          function syncEditorAfterInsert(newVal) {
+            if (!contents) return;
+            contents.value = newVal;
+            if (typeof window.updateWordCount === "function") window.updateWordCount(newVal);
+            if (typeof window.triggerDraftSave === "function") window.triggerDraftSave(newVal);
+            if (typeof window.updateToc === "function") window.updateToc(newVal);
+            if (typeof contents.oninput === "function") {
+              contents.oninput();
+            } else {
+              contents.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+          }
+
+          function applyToolbarAction(action) {
+            const NL = String.fromCharCode(10);
+            const BT = String.fromCharCode(96);
+            const FENCE = BT + BT + BT;
+            const isZh = ${lang === "zh"};
+            const isPriv = ${Boolean(isPrivateMode)};
+
+            if (action === "image" && isPriv && typeof window.openImageManager === "function") {
+              window.openImageManager();
+              return;
+            }
+
+            const vd = window.vditorInstance;
+            if (vd && typeof vd.insertValue === "function") {
+              const selObj = window.getSelection ? window.getSelection() : null;
+              const irEl = vd.vditor && vd.vditor.ir && vd.vditor.ir.element;
+              const inEditor = !!(selObj && selObj.rangeCount > 0 && irEl && irEl.contains(selObj.anchorNode));
+              const sel = inEditor ? selObj.toString() : "";
+              let md = "";
+              if (action === "bold") {
+                if (sel && sel.startsWith("**") && sel.endsWith("**") && sel.length > 4) {
+                  md = sel.slice(2, -2);
+                } else {
+                  md = "**" + (sel || (isZh ? "粗体文本" : "bold")) + "**";
+                }
+              } else if (action === "italic") {
+                if (sel && sel.startsWith("*") && sel.endsWith("*") && sel.length > 2 && !sel.startsWith("**")) {
+                  md = sel.slice(1, -1);
+                } else {
+                  md = "*" + (sel || (isZh ? "斜体文本" : "italic")) + "*";
+                }
+              } else if (action === "h3") md = "### " + (sel || (isZh ? "三级标题" : "Heading 3"));
+              else if (action === "quote") md = "> " + (sel || (isZh ? "引用内容" : "Quote"));
+              else if (action === "code") {
+                if (sel && sel.startsWith(BT) && sel.endsWith(BT) && sel.length > 2) {
+                  md = sel.slice(1, -1);
+                } else {
+                  md = BT + (sel || (isZh ? "行内代码" : "code")) + BT;
+                }
+              }
+              else if (action === "codeblock") md = NL + FENCE + NL + (sel || (isZh ? "代码内容" : "code")) + NL + FENCE + NL;
+              else if (action === "ul") md = "- " + (sel || (isZh ? "列表项" : "List item"));
+              else if (action === "task") md = "- [ ] " + (sel || (isZh ? "待办事项" : "Task item"));
+              else if (action === "link") md = "[" + (sel || (isZh ? "链接文字" : "link text")) + "](https://)";
+              else if (action === "image") md = "![" + (sel || (isZh ? "图片描述" : "alt")) + "](https://)";
+              else if (action === "table") {
+                md = NL + (isZh ? "| 列1 | 列2 | 列3 |" : "| Col 1 | Col 2 | Col 3 |") + NL + "| :--- | :---: | ---: |" + NL + (isZh ? "| 内容1 | 内容2 | 内容3 |" : "| Cell 1 | Cell 2 | Cell 3 |") + NL;
+              }
+              if (md) {
+                if (!inEditor && typeof vd.focus === "function") {
+                  vd.focus();
+                } else if (inEditor && selObj && !selObj.isCollapsed) {
+                  if (typeof vd.deleteValue === "function") {
+                    vd.deleteValue();
+                  } else {
+                    document.execCommand("delete", false);
+                  }
+                }
+                const safeMd = md.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                vd.insertValue(safeMd, true);
+                setTimeout(function() {
+                  const val = typeof vd.getValue === "function" ? vd.getValue() : contents.value;
+                  syncEditorAfterInsert(val);
+                }, 20);
+              }
+              return;
+            }
+
+            if (!contents) return;
+            const val = contents.value || "";
+            const start = typeof contents.selectionStart === "number" ? contents.selectionStart : val.length;
+            const end = typeof contents.selectionEnd === "number" ? contents.selectionEnd : val.length;
+            const sel = val.slice(start, end);
+
+            if (action === "h3" || action === "quote" || action === "ul" || action === "task") {
+              const prefix = action === "h3" ? "### " : (action === "quote" ? "> " : (action === "ul" ? "- " : "- [ ] "));
+              const lineStart = val.lastIndexOf(NL, Math.max(0, start - 1)) + 1;
+              const nextVal = val.slice(0, lineStart) + prefix + val.slice(lineStart);
+              contents.value = nextVal;
+              contents.focus();
+              contents.setSelectionRange(start + prefix.length, end + prefix.length);
+              syncEditorAfterInsert(nextVal);
+              return;
+            }
+
+            let insertText = "";
+            let selStartOffset = 0;
+            let selEndOffset = 0;
+
+            if (action === "bold" || action === "italic" || action === "code") {
+              const mark = action === "bold" ? "**" : (action === "italic" ? "*" : BT);
+              const inner = sel || (action === "bold" ? (isZh ? "粗体文本" : "bold") : (action === "italic" ? (isZh ? "斜体文本" : "italic") : (isZh ? "代码" : "code")));
+              insertText = mark + inner + mark;
+              selStartOffset = mark.length;
+              selEndOffset = mark.length + inner.length;
+            } else if (action === "link") {
+              const text = sel || (isZh ? "链接文字" : "link text");
+              insertText = "[" + text + "](https://)";
+              selStartOffset = text.length + 3;
+              selEndOffset = insertText.length - 1;
+            } else if (action === "image") {
+              const alt = sel || (isZh ? "图片描述" : "alt");
+              insertText = "![" + alt + "](https://)";
+              selStartOffset = alt.length + 4;
+              selEndOffset = insertText.length - 1;
+            } else if (action === "codeblock") {
+              const inner = sel || (isZh ? "代码内容" : "code");
+              const needLead = start > 0 && val.charAt(start - 1) !== NL ? NL : "";
+              insertText = needLead + FENCE + NL + inner + NL + FENCE + NL;
+              selStartOffset = needLead.length + FENCE.length + 1;
+              selEndOffset = selStartOffset + inner.length;
+            } else if (action === "table") {
+              const needLead = start > 0 && val.charAt(start - 1) !== NL ? NL : "";
+              const tbl = (isZh ? "| 列1 | 列2 | 列3 |" : "| Col 1 | Col 2 | Col 3 |") + NL + "| :--- | :---: | ---: |" + NL + (isZh ? "| 内容1 | 内容2 | 内容3 |" : "| Cell 1 | Cell 2 | Cell 3 |") + NL;
+              insertText = needLead + tbl;
+              selStartOffset = insertText.length;
+              selEndOffset = insertText.length;
+            }
+
+            const nextVal = val.slice(0, start) + insertText + val.slice(end);
+            contents.value = nextVal;
+            contents.focus();
+            contents.setSelectionRange(start + selStartOffset, start + selEndOffset);
+            syncEditorAfterInsert(nextVal);
+          }
+
+          etbBar.addEventListener("click", function(e) {
+            const btn = e.target && e.target.closest(".etb-btn");
+            if (!btn) return;
+            const action = btn.getAttribute("data-md");
+            if (action) applyToolbarAction(action);
+          });
         }
       })();
     <\/script>
