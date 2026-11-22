@@ -2,8 +2,6 @@
 
 基于 **Tencent Cloud EdgeOne Makers (Pages)** 全栈无服务器架构、**EdgeOne Blob 存储** 与 **KV 存储** 打造的极速无服务器云笔记。
 
-项目源自对 [s0urcelab/serverless-cloud-notepad](https://github.com/s0urcelab/serverless-cloud-notepad) 的修改与重构，专为腾讯云 EdgeOne 边缘函数与分布式存储体系深度适配。
-
 ---
 
 ## ✨ 核心特性
@@ -71,3 +69,7 @@
 ## 📄 开源许可
 
 本项目遵循 [MIT License](LICENSE) 许可协议。
+
+## 🙏 致谢
+
+- 本项目源自对 [s0urcelab/serverless-cloud-notepad](https://github.com/s0urcelab/serverless-cloud-notepad) 的修改与重构

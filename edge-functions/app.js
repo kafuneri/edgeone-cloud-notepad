@@ -2369,6 +2369,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         }
 
         // --- 1.2 Markdown Mode Button Click Handler ---
+        const cleanNotePathname = window.location.pathname.replace(new RegExp('/+$', 'g'), '');
         const modeBtn = document.getElementById("opt-mode-btn");
         if (modeBtn) {
           modeBtn.onclick = async function() {
@@ -2377,7 +2378,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             const isMd = modeBtn.classList.contains("opt-mode-active");
             const targetMode = isMd ? "plain" : "md";
             try {
-              const res = await fetch(window.location.pathname + "/setting", {
+              const res = await fetch(cleanNotePathname + "/setting", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ mode: targetMode })
@@ -2435,7 +2436,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           if (shareRawCheckbox) shareRawCheckbox.checked = !!isRawPub;
           if (shareRawLinkBox && shareRawFinalUrl) {
             if (isRawPub) {
-              shareRawFinalUrl.value = window.location.origin + "/raw" + window.location.pathname;
+              shareRawFinalUrl.value = window.location.origin + "/raw" + cleanNotePathname;
               shareRawLinkBox.style.display = "block";
             } else {
               shareRawLinkBox.style.display = "none";
@@ -2582,7 +2583,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               }
               lockBtn.disabled = true;
               try {
-                const res = await fetch(window.location.pathname + "/setting", {
+                const res = await fetch(cleanNotePathname + "/setting", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ locked: nextLocked })
@@ -2632,7 +2633,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
               saveShareBtn.innerText = "保存中...";
               try {
-                const res = await fetch(window.location.pathname + "/setting", {
+                const res = await fetch(cleanNotePathname + "/setting", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
@@ -2689,7 +2690,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             disableShareBtn.onclick = async function() {
               if (!confirm("${lang === 'zh' ? '确定要关闭此笔记的对外分享吗？' : 'Disable share for this note?'}")) return;
               try {
-                const res = await fetch(window.location.pathname + "/setting", {
+                const res = await fetch(cleanNotePathname + "/setting", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ share: false })
@@ -2726,7 +2727,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             const nextVal = !!shareRawCheckbox.checked;
             shareRawCheckbox.disabled = true;
             try {
-              const res = await fetch(window.location.pathname + "/setting", {
+              const res = await fetch(cleanNotePathname + "/setting", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ rawPublic: nextVal })
@@ -3850,14 +3851,17 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             if (emptyBox) emptyBox.style.display = "none";
 
             itemsList.innerHTML = "";
+            function escHistText(s) {
+              return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            }
             currentSnapshots.forEach((snap, idx) => {
               const item = document.createElement("div");
               item.style.cssText = "padding:8px 10px; border:1px solid #d0d7de; border-radius:6px; cursor:pointer; background:#fff; transition:all 0.15s ease; text-align:left;";
               const sizeKb = (snap.size / 1024).toFixed(1);
               item.innerHTML = [
-                '<div style="font-size:12px; font-weight:600; color:#1f2328; margin-bottom:2px;">' + (snap.dateStr || "历史版本 " + (idx + 1)) + '</div>',
+                '<div style="font-size:12px; font-weight:600; color:#1f2328; margin-bottom:2px;">' + escHistText(snap.dateStr || ("历史版本 " + (idx + 1))) + '</div>',
                 '<div style="font-size:11px; color:#57606a; margin-bottom:4px;">大小: ' + snap.size + ' 字符 (' + sizeKb + ' KB)</div>',
-                '<div style="font-size:11px; color:#8c959f; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + (snap.preview || "(无预览)") + '</div>'
+                '<div style="font-size:11px; color:#8c959f; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escHistText(snap.preview || "(无预览)") + '</div>'
               ].join("");
 
               item.onmouseenter = function() { if (selectedSnapshot !== snap) item.style.background = "#f6f8fa"; };
@@ -6255,6 +6259,16 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     }
   }
 
+  function safeDecode(s) {
+    try {
+      return decodeURIComponent(s).replace(/^\/+|\/+$/g, "");
+    } catch (e) {
+      const err = new Error("Bad Request");
+      err.status = 400;
+      throw err;
+    }
+  }
+
   // Main dispatcher - zero complex regexes, 100% EdgeOne compliant
   async function route(request) {
     const url = new URL(request.url);
@@ -6330,11 +6344,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         isRawShare = true;
       }
       if (method === "POST" && rest.endsWith("/auth")) {
-        const slug = decodeURIComponent(rest.slice(0, -5));
+        const slug = safeDecode(rest.slice(0, -5));
         return handleShareAuth(request, slug);
       }
       if (method === "GET") {
-        const slug = decodeURIComponent(rest);
+        const slug = safeDecode(rest);
         return handleShareView(request, slug, isRawShare);
       }
       const lang = getI18n(request);
@@ -6345,10 +6359,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       if (pathname.startsWith("/raw/")) {
         const rest = pathname.slice(5);
         if (rest.startsWith("share/")) {
-          const slug = decodeURIComponent(rest.slice(6));
+          const slug = safeDecode(rest.slice(6));
           return handleShareView(request, slug, true);
         }
-        const path = decodeURIComponent(rest);
+        const path = safeDecode(rest);
         if (method === "POST") {
           return handleNoteSave(request, path);
         }
@@ -6358,10 +6372,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       if (pathname.endsWith(".md") && pathname.length > 3) {
         const rest = pathname.slice(1, -3);
         if (rest.startsWith("share/")) {
-          const slug = decodeURIComponent(rest.slice(6));
+          const slug = safeDecode(rest.slice(6));
           return handleShareView(request, slug, true);
         }
-        const path = decodeURIComponent(rest);
+        const path = safeDecode(rest);
         if (method === "POST") {
           return handleNoteSave(request, path);
         }
@@ -6369,27 +6383,27 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       }
 
       if (method === "POST" && pathname.endsWith("/delete") && pathname.length > 8) {
-        const path = decodeURIComponent(pathname.slice(1, -7));
+        const path = safeDecode(pathname.slice(1, -7));
         return handleNoteDelete(request, path);
       }
       if (method === "POST" && pathname.endsWith("/auth") && pathname.length > 6) {
-        const path = decodeURIComponent(pathname.slice(1, -5));
+        const path = safeDecode(pathname.slice(1, -5));
         return handleNoteAuth(request, path);
       }
       if (method === "POST" && pathname.endsWith("/pw") && pathname.length > 4) {
-        const path = decodeURIComponent(pathname.slice(1, -3));
+        const path = safeDecode(pathname.slice(1, -3));
         return handleNotePw(request, path);
       }
       if (method === "POST" && pathname.endsWith("/setting") && pathname.length > 9) {
-        const path = decodeURIComponent(pathname.slice(1, -8));
+        const path = safeDecode(pathname.slice(1, -8));
         return handleNoteSetting(request, path);
       }
       if (method === "POST") {
-        const path = decodeURIComponent(pathname.slice(1));
+        const path = safeDecode(pathname.slice(1));
         return handleNoteSave(request, path);
       }
       if (method === "GET") {
-        const path = decodeURIComponent(pathname.slice(1));
+        const path = safeDecode(pathname.slice(1));
         return handleNoteView(request, path);
       }
     }
@@ -6413,8 +6427,14 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       const resp = await route(request);
       return resp || new Response("Not Found", { status: 404 });
     } catch (err) {
+      if (err && err.status === 400) {
+        return new Response("Bad Request", {
+          status: 400,
+          headers: { "Content-Type": "text/plain;charset=UTF-8" }
+        });
+      }
       console.error("onRequest error:", err);
-      return new Response("Internal Edge Error: " + (err?.stack || err?.message || String(err)), {
+      return new Response("Internal Edge Error: " + (err?.message || "Unknown error"), {
         status: 500,
         headers: { "Content-Type": "text/plain;charset=UTF-8" }
       });
