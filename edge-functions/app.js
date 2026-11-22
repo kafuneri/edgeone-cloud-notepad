@@ -714,7 +714,7 @@ const store = new Proxy({}, {
       searchNotes: "搜索笔记...",
       shareTitle: "分享笔记",
       shareSlugLabel: "自定义短链后缀",
-      sharePwLabel: "访问提取码 (可选)",
+      sharePwLabel: "访问提取码",
       sharePwPh: "留空即公开只读，填写即需要密码",
       saveShare: "保存并生成链接",
       disableShare: "关闭分享",
@@ -766,7 +766,7 @@ const store = new Proxy({}, {
   <span class="slider round"></span>
 </label>
 `;
-  var FOOTER = ({ lang, isEdit, updateAt, pw, mode, share, isPrivateMode, path }) => `
+  var FOOTER = ({ lang, isEdit, updateAt, pw, mode, share, isPrivateMode, path, locked }) => `
     <div class="footer">
         ${isEdit ? `
             <div class="opt">
@@ -778,7 +778,8 @@ const store = new Proxy({}, {
                 <button id="opt-hist-btn" class="opt-button" title="${SUPPORTED_LANG[lang].historyTitle}">${SUPPORTED_LANG[lang].history}</button>
                 <input type="file" id="img-upload-input" accept="image/*" multiple style="display:none;" />
                 ` : ""}
-                <a href="${path ? ('/raw/' + encodeURI(path)) : '#'}" target="_blank" class="opt-button" style="text-decoration:none; display:inline-flex; align-items:center;" title="${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}">${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}</a>
+                <a id="opt-raw-link" href="${path ? ('/raw/' + encodeURI(path)) : '#'}" target="_blank" class="opt-button" style="text-decoration:none; display:inline-flex; align-items:center;" title="${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}">${SUPPORTED_LANG[lang].rawDirectLink || 'Raw'}</a>
+                <button id="opt-lock-btn" type="button" class="opt-button" title="${locked ? (lang === 'zh' ? '笔记已锁定（点击解锁）' : 'Locked (click to unlock)') : (lang === 'zh' ? '锁定笔记（防误触分享）' : 'Lock note')}" style="display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; padding-left:8px; padding-right:8px; ${locked ? 'background:#fff8c5; color:#9a6700; border-color:#d4a72c;' : ''}">${locked ? '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z"></path></svg>' : '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M5.5 4a2.5 2.5 0 0 1 4.607-1.346.75.75 0 1 0 1.264-.808A4 4 0 0 0 4 4v2h-.25C2.784 6 2 6.784 2 7.75v5.5C2 14.216 2.784 15 3.75 15h8.5a1.75 1.75 0 0 0 1.75-1.75v-5.5A1.75 1.75 0 0 0 12.25 6H5.5Zm6.75 3.5a.25.25 0 0 1 .25.25v5.5a.25.25 0 0 1-.25.25h-8.5a.25.25 0 0 1-.25-.25v-5.5a.25.25 0 0 1 .25-.25Z"></path></svg>'}<span style="display:inline-block; width:0; overflow:hidden;">&#8203;</span></button>
             </div>
             ` : ""}
         <div class="status-row">
@@ -807,9 +808,12 @@ var MODAL = (lang, ext = {}) => `
         
         <div style="margin-bottom: 14px; text-align: left;">
           <label style="display: block; font-size: 12px; color: #57606a; margin-bottom: 5px; font-weight: 500;">${SUPPORTED_LANG[lang].shareSlugLabel}</label>
-          <div style="display: flex; align-items: center;">
-            <span style="font-size: 13px; color: #6e7781; background: #f6f8fa; padding: 7px 10px; border: 1px solid #d0d7de; border-right: none; border-radius: 6px 0 0 6px;">/share/</span>
-            <input type="text" id="share-custom-slug" value="${escapeHtml(ext.shareSlug || "")}" placeholder="自定义短链后缀" style="flex: 1; padding: 7px 10px; border: 1px solid #d0d7de; border-radius: 0 6px 6px 0; font-size: 13px; outline: none;" />
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <div style="display: flex; align-items: center; flex: 1; min-width: 0;">
+              <span style="font-size: 13px; color: #6e7781; background: #f6f8fa; padding: 7px 10px; border: 1px solid #d0d7de; border-right: none; border-radius: 6px 0 0 6px; white-space: nowrap;">/share/</span>
+              <input type="text" id="share-custom-slug" value="${escapeHtml(ext.shareSlug || "")}" placeholder="自定义短链后缀" style="flex: 1; min-width: 0; box-sizing: border-box; padding: 7px 10px; border: 1px solid #d0d7de; border-radius: 0 6px 6px 0; font-size: 13px; outline: none;" />
+            </div>
+            <button type="button" id="random-share-slug-btn" style="padding: 7px 10px; border: 1px solid #d0d7de; border-radius: 6px; background: #f6f8fa; color: #24292f; font-size: 12px; cursor: pointer; flex-shrink: 0;">${lang === "zh" ? "随机" : "Random"}</button>
           </div>
         </div>
 
@@ -819,6 +823,10 @@ var MODAL = (lang, ext = {}) => `
             <input type="password" id="share-custom-pw" value="${escapeHtml(ext.sharePwText || "")}" placeholder="${SUPPORTED_LANG[lang].sharePwPh}" style="flex: 1; min-width: 0; box-sizing: border-box; padding: 7px 10px; border: 1px solid #d0d7de; border-radius: 6px; font-size: 13px; outline: none;" />
             <button type="button" id="toggle-share-pw-vis" style="padding: 7px 10px; border: 1px solid #d0d7de; border-radius: 6px; background: #f6f8fa; color: #24292f; font-size: 12px; cursor: pointer; flex-shrink: 0;">${lang === "zh" ? "显示" : "Show"}</button>
           </div>
+          <label style="display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: #57606a; cursor: pointer; user-select: none;">
+            <input type="checkbox" id="share-no-pw" ${ext.share && !ext.hasSharePw ? "checked" : ""} style="width: 14px; height: 14px; cursor: pointer;" />
+            <span>${lang === "zh" ? "无提取码" : "No access code"}</span>
+          </label>
         </div>
 
         <div style="margin-bottom: 14px; text-align: left;">
@@ -2122,6 +2130,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 html += '    <svg class="tree-icon" viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm7.75 3.25V2.06l2.44 2.44Z"></path></svg>';
               }
               html += displayName;
+              if (note.locked) {
+                html += '    <svg viewBox="0 0 16 16" width="12" height="12" fill="#9a6700" style="margin-left:auto; flex-shrink:0;" title="${lang === "zh" ? "已锁定" : "Locked"}"><path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z"></path></svg>';
+              }
               html += '  </a>';
               html += '  <div class="tree-item-actions">';
               html += '    <button class="tree-item-del-btn" data-path="' + encodeURIComponent(note.path) + '" title="${SUPPORTED_LANG[lang].delete}">✕</button>';
@@ -2352,15 +2363,63 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           return u;
         }
 
+        let isNoteLocked = ${JSON.stringify(!!ext.locked)};
+        const LOCK_SVG_CLOSED = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z"></path></svg>';
+        const LOCK_SVG_OPEN = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M5.5 4a2.5 2.5 0 0 1 4.607-1.346.75.75 0 1 0 1.264-.808A4 4 0 0 0 4 4v2h-.25C2.784 6 2 6.784 2 7.75v5.5C2 14.216 2.784 15 3.75 15h8.5a1.75 1.75 0 0 0 1.75-1.75v-5.5A1.75 1.75 0 0 0 12.25 6H5.5Zm6.75 3.5a.25.25 0 0 1 .25.25v5.5a.25.25 0 0 1-.25.25h-8.5a.25.25 0 0 1-.25-.25v-5.5a.25.25 0 0 1 .25-.25Z"></path></svg>';
+
+        function genRandomAlnum(len) {
+          const chars = "23456789abcdefghjkmnpqrstuvwxyz";
+          let out = "";
+          for (let i = 0; i < len; i++) out += chars.charAt(Math.floor(Math.random() * chars.length));
+          return out;
+        }
+
+        function genRandomCode4() {
+          return genRandomAlnum(4);
+        }
+
+        function syncSharePwMode() {
+          const noPwCb = document.getElementById("share-no-pw");
+          if (!shareCustomPw || !noPwCb) return;
+          if (noPwCb.checked) {
+            shareCustomPw.disabled = true;
+            shareCustomPw.style.background = "#f6f8fa";
+          } else {
+            shareCustomPw.disabled = false;
+            shareCustomPw.style.background = "#fff";
+            if (!shareCustomPw.value.trim()) {
+              shareCustomPw.value = genRandomCode4();
+            }
+          }
+        }
+
+        function syncLockBtnUI() {
+          const lockBtn = document.getElementById("opt-lock-btn");
+          if (!lockBtn) return;
+          lockBtn.innerHTML = isNoteLocked ? LOCK_SVG_CLOSED : LOCK_SVG_OPEN;
+          lockBtn.title = isNoteLocked
+            ? "${lang === 'zh' ? '笔记已锁定（点击解锁）' : 'Locked (click to unlock)'}"
+            : "${lang === 'zh' ? '锁定笔记（防误触分享）' : 'Lock note'}";
+          lockBtn.style.background = isNoteLocked ? "#fff8c5" : "";
+          lockBtn.style.color = isNoteLocked ? "#9a6700" : "";
+          lockBtn.style.borderColor = isNoteLocked ? "#d4a72c" : "";
+        }
+
         function openShareModal() {
+          if (isNoteLocked) {
+            alert("${lang === 'zh' ? '笔记已锁定，请先解锁后再分享' : 'Note is locked. Please unlock it first.'}");
+            return;
+          }
           if (shareModal) {
             shareModal.style.display = "block";
             const errBox = document.getElementById("share-error-msg");
             if (errBox) { errBox.style.display = "none"; errBox.textContent = ""; }
             if (shareCustomSlug) shareCustomSlug.style.borderColor = "#d0d7de";
+            syncSharePwMode();
             const currentSlug = shareCustomSlug.value.trim() || ${JSON.stringify(ext.shareSlug || "")};
             if (currentSlug) {
-              const currentPw = (shareCustomPw && shareCustomPw.value.trim()) || ${JSON.stringify(ext.sharePwText || "")};
+              const noPwCb = document.getElementById("share-no-pw");
+              const currentPw = (noPwCb && noPwCb.checked) ? "" : ((shareCustomPw && shareCustomPw.value.trim()) || ${JSON.stringify(ext.sharePwText || "")});
               shareFinalUrl.value = buildShareUrlWithPw(currentSlug, currentPw);
               shareLinkBox.style.display = "block";
               updateShareBadges();
@@ -2398,13 +2457,71 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               if (errBox) errBox.style.display = "none";
             };
           }
+          const randomSlugBtn = document.getElementById("random-share-slug-btn");
+          if (randomSlugBtn && shareCustomSlug) {
+            randomSlugBtn.onclick = function() {
+              shareCustomSlug.value = genRandomAlnum(6);
+              shareCustomSlug.style.borderColor = "#d0d7de";
+              const errBox = document.getElementById("share-error-msg");
+              if (errBox) errBox.style.display = "none";
+            };
+          }
+          const noPwCb = document.getElementById("share-no-pw");
+          if (noPwCb) {
+            noPwCb.onchange = syncSharePwMode;
+          }
+          const rawLinkEl = document.getElementById("opt-raw-link");
+          if (rawLinkEl) {
+            rawLinkEl.onclick = function(e) {
+              if (isNoteLocked) {
+                if (e && e.preventDefault) e.preventDefault();
+                alert("${lang === 'zh' ? '笔记已锁定，请先解锁后再打开 Raw' : 'Note is locked. Please unlock it first.'}");
+              }
+            };
+          }
+          const lockBtn = document.getElementById("opt-lock-btn");
+          if (lockBtn) {
+            lockBtn.onclick = async function() {
+              const nextLocked = !isNoteLocked;
+              lockBtn.disabled = true;
+              try {
+                const res = await fetch(window.location.pathname + "/setting", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ locked: nextLocked })
+                });
+                const data = await res.json();
+                if (data.err === 0) {
+                  isNoteLocked = nextLocked;
+                  syncLockBtnUI();
+                  if (typeof loadNotes === "function") loadNotes();
+                  if (typeof loadShareManagerList === "function") loadShareManagerList(false);
+                } else {
+                  alert(data.msg || "操作失败");
+                }
+              } catch (err) {
+                alert("请求异常: " + err.message);
+              } finally {
+                lockBtn.disabled = false;
+              }
+            };
+          }
 
           if (saveShareBtn) {
             saveShareBtn.onclick = async function(e) {
               if (e && e.preventDefault) e.preventDefault();
               if (e && e.stopPropagation) e.stopPropagation();
+              if (isNoteLocked) {
+                alert("${lang === 'zh' ? '笔记已锁定，请先解锁后再分享' : 'Note is locked. Please unlock it first.'}");
+                return;
+              }
               const slug = shareCustomSlug.value.trim();
-              const pw = shareCustomPw.value.trim();
+              const noPw = noPwCb ? noPwCb.checked : false;
+              let pw = noPw ? "" : shareCustomPw.value.trim();
+              if (!noPw && !pw) {
+                pw = genRandomCode4();
+                shareCustomPw.value = pw;
+              }
               const ttl = Number(shareCustomTtl ? shareCustomTtl.value : 0) || 0;
               const burn = shareBurnCheckbox ? shareBurnCheckbox.checked : false;
               const rawPub = shareRawCheckbox ? shareRawCheckbox.checked : undefined;
@@ -2706,9 +2823,13 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             '</div>';
           }
 
+          const lockIconHtml = item.locked
+            ? '<svg viewBox="0 0 16 16" width="12" height="12" fill="#9a6700" style="flex-shrink:0;" title="${lang === "zh" ? "已锁定" : "Locked"}"><path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z"></path></svg>'
+            : '';
+
           return '<div style="border:1px solid #d0d7de;border-radius:8px;padding:10px 12px;background:#ffffff;">' +
             '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">' +
-              '<a href="/' + encodedPath + '" title="' + escText(item.path) + '" style="font-size:13px;font-weight:600;color:#0969da;text-decoration:none;word-break:break-all;">' + safeDisplay + '</a>' +
+              '<a href="/' + encodedPath + '" title="' + escText(item.path) + '" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#0969da;text-decoration:none;word-break:break-all;">' + safeDisplay + lockIconHtml + '</a>' +
               '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">' + badges + '</div>' +
             '</div>' +
             shareRow +
@@ -2927,6 +3048,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               }
             } else if (act === "toggle-raw") {
               const nextRaw = btn.getAttribute("data-next") === "1";
+              const targetItem = shareMgrItems.find(function(it) { return it.path === targetPath; });
+              if (nextRaw && targetItem && targetItem.locked) {
+                alert("${lang === 'zh' ? '笔记已锁定，请先解锁后再开启 Raw 公开' : 'Note is locked. Unlock it first.'}");
+                return;
+              }
               btn.disabled = true;
               try {
                 const resp = await fetch("/" + encodedPath + "/setting", {
@@ -4353,7 +4479,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       shareTtl: metadata?.shareTtl || 0,
       shareExpireAt: metadata?.shareExpireAt || 0,
       shareBurn: !!metadata?.shareBurn,
-      rawPublic: !!metadata?.rawPublic
+      rawPublic: !!metadata?.rawPublic,
+      locked: !!metadata?.locked
     };
   }
 
@@ -5126,7 +5253,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     const ctype = request.headers.get("content-type") || request.headers.get("Content-Type") || "";
     if (ctype.includes("application/json")) {
       const cookie = import_cookie.default.parse(request.headers.get("Cookie") || "");
-      const { mode, share, shareSlug, sharePw, ttl, burnAfterReading, rawPublic } = await request.json();
+      const { mode, share, shareSlug, sharePw, ttl, burnAfterReading, rawPublic, locked } = await request.json();
       const { value, metadata } = await queryNote(path);
       const valid = await checkAuth(cookie, path);
       if (ADMIN_PASSWORD || !metadata.pw || valid) {
@@ -5136,8 +5263,14 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           const baseMeta = {
             ...metadata,
             ...mode !== void 0 && { mode },
-            ...typeof rawPublic === "boolean" && { rawPublic }
+            ...typeof rawPublic === "boolean" && { rawPublic },
+            ...typeof locked === "boolean" && { locked }
           };
+
+          if ((share === true || rawPublic === true) && baseMeta.locked) {
+            const lang = getI18n(request);
+            return returnJSON(423, lang === "zh" ? "笔记已锁定，请先解锁后再操作" : "Note is locked. Please unlock it first.");
+          }
 
           if (share === true) {
             const lang = getI18n(request);
@@ -5222,9 +5355,9 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               shareBurn: false
             });
             return returnJSON(0, { rawPublic: !!baseMeta.rawPublic });
-          } else if (mode !== void 0 || typeof rawPublic === "boolean") {
+          } else if (mode !== void 0 || typeof rawPublic === "boolean" || typeof locked === "boolean") {
             await putNote(path, value, baseMeta);
-            return returnJSON(0, { rawPublic: !!baseMeta.rawPublic });
+            return returnJSON(0, { rawPublic: !!baseMeta.rawPublic, locked: !!baseMeta.locked });
           }
           return returnJSON(0);
         } catch (error) {
