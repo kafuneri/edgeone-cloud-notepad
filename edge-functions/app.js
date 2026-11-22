@@ -4254,8 +4254,24 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     } else if (ctype.includes("application/x-www-form-urlencoded")) {
       const rawBody = await request.text();
       if (rawBody.startsWith("t=") || rawBody.includes("&t=")) {
-        const params = new URLSearchParams(rawBody);
-        content = params.get("t") ?? rawBody;
+        const decodePart = (s) => {
+          const plusFixed = s.replace(/\+/g, " ");
+          try {
+            return decodeURIComponent(plusFixed);
+          } catch (e) {
+            return plusFixed;
+          }
+        };
+        let parsedT = null;
+        for (const pair of rawBody.split("&")) {
+          const eqIdx = pair.indexOf("=");
+          const k = decodePart(eqIdx >= 0 ? pair.slice(0, eqIdx) : pair);
+          if (k === "t") {
+            parsedT = decodePart(eqIdx >= 0 ? pair.slice(eqIdx + 1) : "");
+            break;
+          }
+        }
+        content = parsedT !== null ? parsedT : rawBody;
       } else {
         content = rawBody;
       }
