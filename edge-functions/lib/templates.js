@@ -1,5 +1,5 @@
 import { CDN_PREFIX, SUPPORTED_LANG, escapeHtml } from "./constants.js";
-import { FOOTER, MODAL, IMAGE_MODAL, HISTORY_MODAL, SHARE_MGR_MODAL, LIGHTBOX, TOC_PANEL, AdminLogin, NeedSharePasswd } from "./templates-modals.js";
+import { THEME_INIT_SCRIPT, FOOTER, MODAL, IMAGE_MODAL, HISTORY_MODAL, SHARE_MGR_MODAL, QUICK_SWITCH_MODAL, LIGHTBOX, TOC_PANEL, AdminLogin, NeedSharePasswd } from "./templates-modals.js";
 
 var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPrivateMode = false }) => {
     const isMdMode = ext.mode === "md";
@@ -11,14 +11,140 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${escapeHtml(title)} — Cloud Notepad</title>
+    ${THEME_INIT_SCRIPT}
     <link href="${CDN_PREFIX}/favicon.ico" rel="shortcut icon" type="image/ico" />
     <link href="${CDN_PREFIX}/css/app.min.css" rel="stylesheet" media="screen" />
     ${isEdit && isMdMode ? `<link href="//gcore.jsdelivr.net/npm/vditor@3.10.8/dist/index.css" rel="stylesheet" />` : ""}
     <style>
+      :root {
+        color-scheme: light;
+        --bg-canvas: #ebeef2;
+        --bg-surface: #ffffff;
+        --bg-subtle: #f6f8fa;
+        --bg-muted: #fafbfc;
+        --bg-hover: #eef1f4;
+        --bg-active: #e1e7ed;
+        --bg-float: rgba(255, 255, 255, 0.94);
+        --bg-footer: rgba(255, 255, 255, 0.72);
+        --mask-bg: rgba(0, 0, 0, 0.45);
+        --text-primary: #1f2328;
+        --text-body: #24292f;
+        --text-editor: #3a3b3c;
+        --text-secondary: #57606a;
+        --text-muted: #6e7781;
+        --border-default: #d0d7de;
+        --border-muted: #e1e4e8;
+        --border-soft: #eaecef;
+        --accent-fg: #0969da;
+        --accent-bg: #f0f6fc;
+        --accent-bg-strong: #ddf4ff;
+        --accent-border: #b6e3ff;
+        --danger-fg: #cf222e;
+        --danger-bg: #ffebe9;
+        --danger-border: #ffc1c0;
+        --warn-fg: #9a6700;
+        --warn-bg: #fff8c5;
+        --warn-border: #d4a72c;
+        --success-fg: #1a7f37;
+        --success-bg: #dafbe1;
+        --success-border: #aceebb;
+        --code-bg: rgba(175, 184, 193, 0.2);
+        --checker-a: #f0f0f0;
+        --checker-b: #ffffff;
+        --shadow-card: 0 12px 36px rgba(0, 0, 0, 0.2);
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+        --toast-bg: #1f2328;
+        --toast-fg: #ffffff;
+      }
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --bg-canvas: #0d1117;
+        --bg-surface: #161b22;
+        --bg-subtle: #1c2128;
+        --bg-muted: #21262d;
+        --bg-hover: #262c36;
+        --bg-active: #1f2f46;
+        --bg-float: rgba(22, 27, 34, 0.94);
+        --bg-footer: rgba(22, 27, 34, 0.78);
+        --mask-bg: rgba(0, 0, 0, 0.68);
+        --text-primary: #f0f6fc;
+        --text-body: #e6edf3;
+        --text-editor: #e6edf3;
+        --text-secondary: #8b949e;
+        --text-muted: #7d8590;
+        --border-default: #30363d;
+        --border-muted: #21262d;
+        --border-soft: #262c36;
+        --accent-fg: #58a6ff;
+        --accent-bg: rgba(56, 139, 253, 0.14);
+        --accent-bg-strong: rgba(56, 139, 253, 0.2);
+        --accent-border: rgba(56, 139, 253, 0.4);
+        --danger-fg: #f85149;
+        --danger-bg: rgba(248, 81, 73, 0.14);
+        --danger-border: rgba(248, 81, 73, 0.4);
+        --warn-fg: #e3b341;
+        --warn-bg: rgba(187, 128, 9, 0.18);
+        --warn-border: rgba(210, 153, 34, 0.45);
+        --success-fg: #3fb950;
+        --success-bg: rgba(46, 160, 67, 0.16);
+        --success-border: rgba(63, 185, 80, 0.4);
+        --code-bg: rgba(110, 118, 129, 0.28);
+        --checker-a: #21262d;
+        --checker-b: #161b22;
+        --shadow-card: 0 14px 40px rgba(0, 0, 0, 0.6);
+        --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.45);
+        --toast-bg: #21262d;
+        --toast-fg: #f0f6fc;
+      }
+
+      /* Dark mode overrides for external app.min.css paper & base chrome */
+      html[data-theme="dark"],
+      html[data-theme="dark"] body {
+        background: var(--bg-canvas) !important;
+        color: var(--text-body) !important;
+      }
+      html[data-theme="dark"] .stack,
+      html[data-theme="dark"] .stack .layer_1,
+      html[data-theme="dark"] .stack .layer_1 .layer_2,
+      html[data-theme="dark"] .stack .layer_1 .layer_2 .layer_3 {
+        background: var(--bg-surface) !important;
+        border-color: var(--border-default) !important;
+        box-shadow: 0 2px 14px rgba(0, 0, 0, 0.45) !important;
+      }
+      html[data-theme="dark"] textarea#contents,
+      html[data-theme="dark"] #preview-plain {
+        background: transparent !important;
+        color: var(--text-editor) !important;
+        caret-color: var(--accent-fg) !important;
+      }
+      html[data-theme="dark"] textarea#contents::placeholder {
+        color: var(--text-muted) !important;
+      }
+      html[data-theme="dark"] .opt-button {
+        background: var(--bg-muted);
+        color: var(--text-body);
+        border: 1px solid var(--border-default);
+      }
+      html[data-theme="dark"] .opt-button:hover {
+        background: var(--bg-hover);
+        border-color: var(--text-muted);
+      }
+      html[data-theme="dark"] .modal .modal-content {
+        background: var(--bg-surface) !important;
+        color: var(--text-body) !important;
+        border: 1px solid var(--border-default) !important;
+      }
+      html[data-theme="dark"] .close-btn {
+        color: var(--text-secondary) !important;
+      }
+      html[data-theme="dark"] .close-btn:hover {
+        color: var(--text-primary) !important;
+      }
+
       /* Markdown view styling */
       #preview-md {
         line-height: 1.7;
-        color: #24292f;
+        color: var(--text-body);
         word-wrap: break-word;
         white-space: normal;
         padding: 4px 10px;
@@ -29,18 +155,18 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         margin-bottom: 12px;
         font-weight: 600;
         line-height: 1.3;
-        color: #1f2328;
+        color: var(--text-primary);
       }
-      #preview-md h1 { font-size: 1.85em; border-bottom: 1px solid #d0d7de; padding-bottom: 0.3em; }
-      #preview-md h2 { font-size: 1.45em; border-bottom: 1px solid #d0d7de; padding-bottom: 0.3em; }
+      #preview-md h1 { font-size: 1.85em; border-bottom: 1px solid var(--border-default); padding-bottom: 0.3em; }
+      #preview-md h2 { font-size: 1.45em; border-bottom: 1px solid var(--border-default); padding-bottom: 0.3em; }
       #preview-md h3 { font-size: 1.2em; }
       #preview-md p { margin: 0 0 14px 0; }
       #preview-md blockquote {
         margin: 0 0 16px;
         padding: 4px 14px;
-        color: #57606a;
-        border-left: 4px solid #0969da;
-        background: #f6f8fa;
+        color: var(--text-secondary);
+        border-left: 4px solid var(--accent-fg);
+        background: var(--bg-subtle);
         border-radius: 2px;
       }
       #preview-md ul, #preview-md ol {
@@ -52,7 +178,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         padding: 0.2em 0.4em;
         margin: 0;
         font-size: 88%;
-        background-color: rgba(175, 184, 193, 0.2);
+        background-color: var(--code-bg);
         border-radius: 6px;
         font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
       }
@@ -61,8 +187,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         overflow-x: auto;
         font-size: 88%;
         line-height: 1.45;
-        background-color: #f6f8fa;
-        border: 1px solid #d0d7de;
+        background-color: var(--bg-subtle);
+        border: 1px solid var(--border-default);
         border-radius: 6px;
         margin-bottom: 16px;
       }
@@ -80,14 +206,14 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       }
       #preview-md table th, #preview-md table td {
         padding: 8px 14px;
-        border: 1px solid #d0d7de;
+        border: 1px solid var(--border-default);
       }
       #preview-md table th {
-        background-color: #f6f8fa;
+        background-color: var(--bg-subtle);
         font-weight: 600;
       }
       #preview-md table tr:nth-child(2n) {
-        background-color: #fcfdfe;
+        background-color: var(--bg-muted);
       }
       /* Automatic image width & height constraints to prevent screen overflow */
       .vditor-reset img,
@@ -130,11 +256,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         height: 2px;
         padding: 0;
         margin: 20px 0;
-        background-color: #d0d7de;
+        background-color: var(--border-default);
         border: 0;
       }
       #preview-md a {
-        color: #0969da;
+        color: var(--accent-fg);
         text-decoration: none;
       }
       #preview-md a:hover {
@@ -169,8 +295,49 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         font-family: Arial, Helvetica, sans-serif !important;
         font-size: 15px !important;
         line-height: 1.7 !important;
-        color: #3a3b3c !important;
+        color: var(--text-editor) !important;
         background: transparent !important;
+      }
+      html[data-theme="dark"] .vditor--dark {
+        --panel-background-color: var(--bg-surface);
+        --textarea-background-color: transparent;
+        --border-color: var(--border-default);
+        --second-color: var(--text-secondary);
+        --hover-background-color: var(--bg-hover);
+      }
+      html[data-theme="dark"] .vditor-reset {
+        color: var(--text-editor) !important;
+      }
+      html[data-theme="dark"] .vditor-reset h1,
+      html[data-theme="dark"] .vditor-reset h2,
+      html[data-theme="dark"] .vditor-reset h3,
+      html[data-theme="dark"] .vditor-reset h4 {
+        color: var(--text-primary) !important;
+        border-color: var(--border-default) !important;
+      }
+      html[data-theme="dark"] .vditor-reset blockquote {
+        color: var(--text-secondary) !important;
+        border-left-color: var(--accent-fg) !important;
+        background: var(--bg-subtle) !important;
+      }
+      html[data-theme="dark"] .vditor-reset code:not(.hljs) {
+        background-color: var(--code-bg) !important;
+        color: var(--text-body) !important;
+      }
+      html[data-theme="dark"] .vditor-reset pre,
+      html[data-theme="dark"] .vditor-ir__marker--pre {
+        background-color: var(--bg-subtle) !important;
+      }
+      html[data-theme="dark"] .vditor-reset table th,
+      html[data-theme="dark"] .vditor-reset table td {
+        border-color: var(--border-default) !important;
+        background-color: transparent !important;
+      }
+      html[data-theme="dark"] .vditor-reset table th {
+        background-color: var(--bg-subtle) !important;
+      }
+      html[data-theme="dark"] .vditor-reset a {
+        color: var(--accent-fg) !important;
       }
 
       /* Sidebar toggle button (top-left minimalist trigger) */
@@ -181,23 +348,23 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         width: 32px;
         height: 32px;
         border-radius: 6px;
-        background: rgba(255, 255, 255, 0.9);
-        border: 1px solid #d0d7de;
-        color: #57606a;
+        background: var(--bg-float);
+        border: 1px solid var(--border-default);
+        color: var(--text-secondary);
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         z-index: 100;
         transition: all 0.2s ease;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow-sm);
         font-size: 16px;
       }
       .sidebar-toggle-btn:hover {
-        background: #ffffff;
-        color: #1f2328;
-        border-color: #8c959f;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        background: var(--bg-surface);
+        color: var(--text-primary);
+        border-color: var(--text-muted);
+        box-shadow: var(--shadow-sm);
       }
 
       /* Sidebar overlay */
@@ -207,7 +374,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.35);
+        background: var(--mask-bg);
         backdrop-filter: blur(2px);
         z-index: 998;
         opacity: 0;
@@ -226,14 +393,15 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         left: 0;
         width: 290px;
         height: 100%;
-        background: #ffffff;
-        border-right: 1px solid #e1e4e8;
+        background: var(--bg-surface);
+        color: var(--text-body);
+        border-right: 1px solid var(--border-muted);
         z-index: 999;
         transform: translateX(-100%);
         transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         display: flex;
         flex-direction: column;
-        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.08);
+        box-shadow: var(--shadow-card);
         box-sizing: border-box;
       }
       .sidebar.active {
@@ -246,7 +414,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         display: flex;
         align-items: center;
         justify-content: space-between;
-        border-bottom: 1px solid #eaecef;
+        border-bottom: 1px solid var(--border-soft);
       }
       .sidebar-brand {
         display: flex;
@@ -254,41 +422,61 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         gap: 8px;
         font-weight: 600;
         font-size: 15px;
-        color: #24292f;
+        color: var(--text-body);
       }
       .sidebar-close-btn {
         background: none;
         border: none;
-        color: #6a737d;
+        color: var(--text-secondary);
         cursor: pointer;
         font-size: 16px;
         padding: 4px 8px;
         border-radius: 4px;
       }
-      .sidebar-close-btn:hover { background: #eaecef; color: #24292f; }
+      .sidebar-close-btn:hover { background: var(--bg-hover); color: var(--text-body); }
 
       /* Sidebar search and actions */
       .sidebar-actions {
         padding: 12px 14px;
         display: flex;
-        gap: 8px;
-        border-bottom: 1px solid #f0f2f5;
+        gap: 6px;
+        border-bottom: 1px solid var(--border-muted);
       }
       .sidebar-search-input {
         flex: 1;
+        min-width: 0;
         padding: 6px 10px;
         font-size: 13px;
-        border: 1px solid #d1d5da;
+        border: 1px solid var(--border-default);
         border-radius: 5px;
         outline: none;
-        background: #fbfcfd;
+        background: var(--bg-subtle);
+        color: var(--text-body);
       }
       .sidebar-search-input:focus {
-        border-color: #0969da;
-        background: #fff;
+        border-color: var(--accent-fg);
+        background: var(--bg-surface);
+      }
+      .sidebar-qs-btn {
+        padding: 0 8px;
+        background: var(--bg-subtle);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-default);
+        border-radius: 5px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: all 0.15s ease;
+      }
+      .sidebar-qs-btn:hover {
+        background: var(--accent-bg);
+        color: var(--accent-fg);
+        border-color: var(--accent-fg);
       }
       .sidebar-new-btn {
-        padding: 6px 12px;
+        padding: 6px 10px;
         background: #2da44e;
         color: #fff;
         border: none;
@@ -297,6 +485,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         font-weight: 600;
         cursor: pointer;
         white-space: nowrap;
+        flex-shrink: 0;
       }
       .sidebar-new-btn:hover { background: #2c974b; }
 
@@ -315,20 +504,20 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         padding: 6px 8px;
         font-size: 13px;
         font-weight: 600;
-        color: #444d56;
+        color: var(--text-body);
         border-radius: 4px;
         cursor: pointer;
         user-select: none;
       }
       .tree-folder-title:hover {
-        background: #f1f3f5;
+        background: var(--bg-hover);
       }
       .tree-folder-arrow {
         display: inline-block;
         width: 14px;
         font-size: 10px;
         transition: transform 0.15s ease;
-        color: #8c959f;
+        color: var(--text-muted);
       }
       .tree-folder.collapsed .tree-folder-arrow {
         transform: rotate(-90deg);
@@ -338,7 +527,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       }
       .tree-folder-content {
         padding-left: 14px;
-        border-left: 1px solid #e1e4e8;
+        border-left: 1px solid var(--border-muted);
         margin-left: 8px;
       }
       .tree-item {
@@ -347,19 +536,19 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         justify-content: space-between;
         padding: 6px 10px;
         font-size: 13px;
-        color: #24292f;
+        color: var(--text-body);
         border-radius: 4px;
         cursor: pointer;
         text-decoration: none;
         position: relative;
       }
       .tree-item:hover {
-        background: #eef1f4;
+        background: var(--bg-hover);
       }
       .tree-item.active {
-        background: #e1e7ed;
+        background: var(--bg-active);
         font-weight: 600;
-        color: #0969da;
+        color: var(--accent-fg);
       }
       .tree-item-text {
         overflow: hidden;
@@ -380,7 +569,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       .tree-item-rename-btn {
         background: none;
         border: none;
-        color: #57606a;
+        color: var(--text-secondary);
         cursor: pointer;
         padding: 2px 5px;
         border-radius: 3px;
@@ -389,37 +578,58 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         align-items: center;
       }
       .tree-item-rename-btn:hover {
-        background: #eaeef2;
-        color: #0969da;
+        background: var(--bg-hover);
+        color: var(--accent-fg);
       }
       .tree-item-del-btn {
         background: none;
         border: none;
-        color: #cf222e;
+        color: var(--danger-fg);
         cursor: pointer;
         padding: 2px 6px;
         border-radius: 3px;
         font-size: 12px;
       }
       .tree-item-del-btn:hover {
-        background: #ffebe9;
+        background: var(--danger-bg);
       }
 
-      /* Sidebar footer */
+      /* Sidebar backup & footer */
+      .sidebar-backup-box {
+        padding: 10px 14px;
+        border-top: 1px solid var(--border-muted);
+        background: var(--bg-surface);
+      }
+      .sidebar-export-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 7px 12px;
+        background: var(--bg-subtle);
+        border: 1px solid var(--border-default);
+        border-radius: 6px;
+        font-size: 12px;
+        color: var(--text-body);
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+      }
       .sidebar-footer {
         padding: 12px 16px;
-        border-top: 1px solid #eaecef;
+        border-top: 1px solid var(--border-soft);
         display: flex;
         align-items: center;
         justify-content: space-between;
         font-size: 12px;
-        color: #57606a;
-        background: #fafbfc;
+        color: var(--text-secondary);
+        background: var(--bg-muted);
       }
       .sidebar-logout-btn {
         background: none;
         border: none;
-        color: #cf222e;
+        color: var(--danger-fg);
         cursor: pointer;
         font-size: 12px;
         padding: 4px 6px;
@@ -444,9 +654,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         display: block !important;
         padding: 24px 28px !important;
         box-sizing: border-box !important;
-        background: #ffffff !important;
+        background: var(--bg-surface) !important;
+        color: var(--text-body) !important;
+        border: 1px solid var(--border-default) !important;
         border-radius: 12px !important;
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22) !important;
+        box-shadow: var(--shadow-card) !important;
         z-index: 1000 !important;
       }
       .image-modal .modal-content, .history-modal .modal-content, .share-mgr-modal .modal-content {
@@ -468,12 +680,279 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         align-items: stretch !important;
         padding: 20px 24px !important;
         box-sizing: border-box !important;
-        background: #ffffff !important;
+        background: var(--bg-surface) !important;
+        color: var(--text-body) !important;
+        border: 1px solid var(--border-default) !important;
         border-radius: 12px !important;
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22) !important;
+        box-shadow: var(--shadow-card) !important;
         z-index: 1002 !important;
         overflow: hidden !important;
       }
+      /* Quick Switch & Full-Text Search Palette */
+      .quick-switch-modal .quick-switch-content {
+        position: relative !important;
+        inset: auto !important;
+        transform: none !important;
+        margin: 0 12px !important;
+        z-index: 1011 !important;
+        width: 100% !important;
+        max-width: 660px !important;
+        height: auto !important;
+        max-height: 76vh !important;
+        background: var(--bg-surface) !important;
+        color: var(--text-body) !important;
+        border: 1px solid var(--border-default) !important;
+        border-radius: 12px !important;
+        box-shadow: var(--shadow-card) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+        text-align: left !important;
+      }
+      .qs-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--border-muted);
+        background: var(--bg-surface);
+      }
+      .qs-input {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        outline: none;
+        background: transparent;
+        color: var(--text-primary);
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      .qs-input::placeholder { color: var(--text-muted); }
+      .qs-tabs {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+      .qs-mode-btn {
+        padding: 3px 9px;
+        font-size: 12px;
+        border-radius: 5px;
+        border: 1px solid var(--border-default);
+        background: var(--bg-subtle);
+        color: var(--text-secondary);
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .qs-mode-btn.active {
+        background: var(--accent-fg);
+        color: #fff;
+        border-color: var(--accent-fg);
+        font-weight: 500;
+      }
+      .qs-icon-btn {
+        padding: 4px 6px;
+        border-radius: 5px;
+        border: 1px solid var(--border-default);
+        background: var(--bg-subtle);
+        color: var(--text-secondary);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .qs-icon-btn:hover {
+        background: var(--bg-hover);
+        color: var(--accent-fg);
+      }
+      .qs-close-btn {
+        position: static !important;
+        width: auto !important;
+        height: auto !important;
+        line-height: 1 !important;
+        padding: 2px 6px;
+        font-size: 16px;
+        cursor: pointer;
+        color: var(--text-secondary);
+        flex-shrink: 0;
+      }
+      .qs-status {
+        padding: 6px 14px;
+        font-size: 11px;
+        color: var(--text-muted);
+        background: var(--bg-subtle);
+        border-bottom: 1px solid var(--border-muted);
+      }
+      .qs-results {
+        flex: 1;
+        overflow-y: auto;
+        padding: 6px;
+        min-height: 140px;
+        max-height: 52vh;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .qs-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px 10px;
+        border-radius: 7px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        text-decoration: none;
+        color: var(--text-body);
+        transition: background 0.12s ease;
+      }
+      .qs-item:hover,
+      .qs-item.active {
+        background: var(--accent-bg);
+        border-color: var(--accent-border);
+      }
+      .qs-item-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .qs-item-path {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .qs-item.active .qs-item-path {
+        color: var(--accent-fg);
+      }
+      .qs-item-badge {
+        font-size: 11px;
+        color: var(--text-muted);
+        flex-shrink: 0;
+      }
+      .qs-snippet {
+        font-size: 12px;
+        line-height: 1.45;
+        color: var(--text-secondary);
+        word-break: break-word;
+      }
+      .qs-hl {
+        background: var(--warn-bg);
+        color: var(--warn-fg);
+        border-radius: 3px;
+        padding: 0 2px;
+        font-weight: 600;
+      }
+      .qs-empty {
+        padding: 36px 16px;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 13px;
+      }
+      .qs-footer {
+        padding: 8px 14px;
+        border-top: 1px solid var(--border-muted);
+        background: var(--bg-subtle);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+
+      /* Shared theme-aware helper classes for dynamic modals */
+      .history-snap-item {
+        padding: 8px 10px;
+        border: 1px solid var(--border-default);
+        border-radius: 6px;
+        cursor: pointer;
+        background: var(--bg-surface);
+        color: var(--text-body);
+        transition: all 0.15s ease;
+        text-align: left;
+      }
+      .history-snap-item:hover {
+        background: var(--bg-subtle);
+      }
+      .history-snap-item.selected {
+        border-color: var(--accent-fg);
+        background: var(--accent-bg);
+      }
+      .img-preview-box {
+        width: 100%;
+        height: 110px;
+        background-image: repeating-conic-gradient(var(--checker-a) 0% 25%, var(--checker-b) 0% 50%) 50% / 16px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        overflow: hidden;
+      }
+      .sm-tab {
+        background: var(--bg-subtle) !important;
+        color: var(--text-secondary) !important;
+        border: 1px solid var(--border-default) !important;
+      }
+      .sm-tab.active {
+        background: var(--accent-fg) !important;
+        color: #fff !important;
+        border-color: var(--accent-fg) !important;
+      }
+      .sm-btn {
+        background: var(--bg-surface) !important;
+        color: var(--text-body) !important;
+        border: 1px solid var(--border-default) !important;
+      }
+      .sm-clean-btn {
+        background: var(--warn-bg) !important;
+        color: var(--warn-fg) !important;
+        border: 1px solid var(--warn-border) !important;
+      }
+      .sm-card {
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: var(--bg-surface);
+      }
+      .sm-folder-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 10px;
+        background: var(--bg-subtle);
+        border: 1px solid var(--border-default);
+        border-radius: 6px;
+        cursor: pointer;
+        user-select: none;
+      }
+      #action-toast {
+        position: fixed;
+        bottom: 60px;
+        right: 24px;
+        background: var(--toast-bg);
+        color: var(--toast-fg);
+        border: 1px solid var(--border-default);
+        padding: 7px 14px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        z-index: 99999;
+        box-shadow: var(--shadow-card);
+        opacity: 1;
+        transition: opacity 0.2s ease;
+        pointer-events: none;
+      }
+      #action-toast.error {
+        background: var(--danger-fg);
+        color: #fff;
+        border-color: var(--danger-fg);
+      }
+
       /* Markdown button active / inactive states */
       .opt-mode-active {
         background: #3a86ff !important;
@@ -486,15 +965,15 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         border-color: #2a75ef !important;
       }
       .opt-mode-inactive {
-        background: #f6f8fa !important;
-        color: #57606a !important;
-        border: 1px solid #d0d7de !important;
+        background: var(--bg-subtle) !important;
+        color: var(--text-secondary) !important;
+        border: 1px solid var(--border-default) !important;
         font-weight: normal !important;
       }
       .opt-mode-inactive:hover {
-        background: #eaeef2 !important;
-        color: #24292f !important;
-        border-color: #8c959f !important;
+        background: var(--bg-hover) !important;
+        color: var(--text-body) !important;
+        border-color: var(--text-muted) !important;
       }
 
       /* Note Container & Content clearance from bottom footer */
@@ -529,10 +1008,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         width: 100% !important;
         height: auto !important;
         min-height: 42px !important;
-        background: rgba(255, 255, 255, 0.3) !important;
+        background: var(--bg-footer) !important;
         backdrop-filter: blur(14px) saturate(180%) !important;
         -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
-        border-top: 1px solid rgba(208, 215, 222, 0.45) !important;
+        border-top: 1px solid var(--border-default) !important;
         box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.04) !important;
         padding: 6px 24px !important;
         box-sizing: border-box !important;
@@ -568,15 +1047,52 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         gap: 12px !important;
         margin-left: auto !important;
       }
+      .footer .footer-icon-group {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+      }
+      .footer .theme-toggle-btn,
       .footer .github-link {
-        color: #57606a !important;
+        width: 24px !important;
+        height: 24px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+        flex-shrink: 0 !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        transition: color 0.15s ease !important;
+        border-radius: 5px !important;
+        border: 1px solid transparent !important;
+        background: transparent !important;
+        color: var(--text-secondary) !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
+        transition: all 0.15s ease !important;
       }
+      .footer .theme-toggle-btn:hover,
       .footer .github-link:hover {
-        color: #24292f !important;
+        color: var(--text-primary) !important;
+        background: var(--bg-hover) !important;
+        border-color: var(--border-default) !important;
+      }
+      .footer .theme-toggle-btn.opt-locked {
+        background: transparent !important;
+        border-color: transparent !important;
+        color: var(--warn-fg) !important;
+      }
+      .footer .theme-toggle-btn.opt-locked:hover {
+        background: var(--bg-hover) !important;
+        border-color: var(--border-default) !important;
+        color: var(--warn-fg) !important;
+      }
+      .footer .theme-toggle-btn svg,
+      .footer .github-link svg {
+        width: 15px !important;
+        height: 15px !important;
+        display: block !important;
+        flex-shrink: 0 !important;
       }
 
       /* Mobile Responsive (<= 768px) */
@@ -613,10 +1129,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           flex-direction: column !important;
           align-items: stretch !important;
           gap: 6px !important;
-          background: rgba(255, 255, 255, 0.3) !important;
+          background: var(--bg-footer) !important;
           backdrop-filter: blur(16px) saturate(180%) !important;
           -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
-          border-top: 1px solid rgba(208, 215, 222, 0.45) !important;
+          border-top: 1px solid var(--border-default) !important;
           box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.04) !important;
         }
         .footer .opt {
@@ -658,34 +1174,33 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         height: 32px;
         padding: 0 10px;
         border-radius: 6px;
-        background: rgba(255, 255, 255, 0.95);
-        border: 1px solid #d0d7de;
-        color: #57606a;
+        background: var(--bg-float);
+        border: 1px solid var(--border-default);
+        color: var(--text-secondary);
         display: none;
         align-items: center;
         gap: 6px;
         cursor: pointer;
         z-index: 990;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        box-shadow: var(--shadow-sm);
         transition: all 0.2s ease;
         font-size: 13px;
         font-weight: 500;
         user-select: none;
       }
       .toc-toggle-btn:hover {
-        background: #ffffff;
-        color: #0969da;
-        border-color: #8c959f;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        background: var(--bg-surface);
+        color: var(--accent-fg);
+        border-color: var(--text-muted);
       }
       .toc-badge {
         font-size: 11px;
         font-weight: 600;
         padding: 1px 6px;
         border-radius: 10px;
-        background: #f0f6fc;
-        color: #0969da;
-        border: 1px solid #d0d7de;
+        background: var(--accent-bg);
+        color: var(--accent-fg);
+        border: 1px solid var(--border-default);
         line-height: 1.2;
       }
       .toc-panel {
@@ -694,10 +1209,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         right: 14px;
         width: 250px;
         max-height: calc(85vh - 60px);
-        background: #ffffff;
-        border: 1px solid #d0d7de;
+        background: var(--bg-surface);
+        color: var(--text-body);
+        border: 1px solid var(--border-default);
         border-radius: 8px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        box-shadow: var(--shadow-card);
         display: none;
         flex-direction: column;
         z-index: 995;
@@ -713,8 +1229,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         justify-content: space-between;
         align-items: center;
         padding: 10px 12px;
-        border-bottom: 1px solid #e1e4e8;
-        background: #f6f8fa;
+        border-bottom: 1px solid var(--border-muted);
+        background: var(--bg-subtle);
         user-select: none;
       }
       .toc-list {
@@ -731,7 +1247,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         border-radius: 4px;
         font-size: 12px;
         line-height: 1.4;
-        color: #57606a;
+        color: var(--text-secondary);
         text-decoration: none;
         cursor: pointer;
         transition: background 0.15s ease, color 0.15s ease;
@@ -740,29 +1256,29 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         text-overflow: ellipsis;
       }
       .toc-item:hover {
-        background: #f0f6fc;
-        color: #0969da;
+        background: var(--accent-bg);
+        color: var(--accent-fg);
       }
       .toc-item.active {
-        background: #e7f2fa;
-        color: #0969da;
+        background: var(--accent-bg-strong);
+        color: var(--accent-fg);
         font-weight: 600;
       }
-      .toc-item.h1 { font-weight: 600; color: #1f2328; padding-left: 8px; }
-      .toc-item.h2 { font-weight: 500; color: #24292f; padding-left: 18px; }
-      .toc-item.h3 { color: #57606a; padding-left: 28px; }
-      .toc-item.h4 { color: #6e7781; padding-left: 36px; font-size: 11px; }
-      .toc-item.h5 { color: #8c959f; padding-left: 44px; font-size: 11px; }
-      .toc-item.h6 { color: #8c959f; padding-left: 52px; font-size: 11px; }
+      .toc-item.h1 { font-weight: 600; color: var(--text-primary); padding-left: 8px; }
+      .toc-item.h2 { font-weight: 500; color: var(--text-body); padding-left: 18px; }
+      .toc-item.h3 { color: var(--text-secondary); padding-left: 28px; }
+      .toc-item.h4 { color: var(--text-muted); padding-left: 36px; font-size: 11px; }
+      .toc-item.h5 { color: var(--text-muted); padding-left: 44px; font-size: 11px; }
+      .toc-item.h6 { color: var(--text-muted); padding-left: 52px; font-size: 11px; }
 
       /* Sidebar full vault export button */
       .sidebar-export-btn:hover {
-        background: #f3f4f6 !important;
-        border-color: #8c959f !important;
-        color: #0969da !important;
+        background: var(--bg-hover) !important;
+        border-color: var(--text-muted) !important;
+        color: var(--accent-fg) !important;
       }
       .sidebar-export-btn:active {
-        background: #ebedf0 !important;
+        background: var(--bg-active) !important;
       }
 
       /* Lightweight Collapsible Edit Toolbar */
@@ -786,27 +1302,26 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         height: 32px;
         flex-shrink: 0;
         border-radius: 6px;
-        background: rgba(255, 255, 255, 0.9);
-        border: 1px solid #d0d7de;
-        color: #57606a;
+        background: var(--bg-float);
+        border: 1px solid var(--border-default);
+        color: var(--text-secondary);
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         transition: all 0.2s ease;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow-sm);
         padding: 0;
       }
       .edit-toolbar-toggle:hover {
-        background: #ffffff;
-        color: #1f2328;
-        border-color: #8c959f;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        background: var(--bg-surface);
+        color: var(--text-primary);
+        border-color: var(--text-muted);
       }
       .edit-toolbar-toggle.active {
-        background: #f0f6fc;
-        color: #0969da;
-        border-color: #0969da;
+        background: var(--accent-bg);
+        color: var(--accent-fg);
+        border-color: var(--accent-fg);
       }
       .edit-toolbar-bar {
         pointer-events: auto;
@@ -815,12 +1330,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         flex-wrap: wrap;
         gap: 4px;
         padding: 3px 5px;
-        background: rgba(255, 255, 255, 0.96);
+        background: var(--bg-float);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
-        border: 1px solid #d0d7de;
+        border: 1px solid var(--border-default);
         border-radius: 8px;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+        box-shadow: var(--shadow-card);
         max-width: 100%;
         box-sizing: border-box;
       }
@@ -832,10 +1347,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         height: 26px;
         min-width: 26px;
         padding: 0 7px;
-        border: 1px solid #d0d7de;
+        border: 1px solid var(--border-default);
         border-radius: 5px;
-        background: #ffffff;
-        color: #24292f;
+        background: var(--bg-surface);
+        color: var(--text-body);
         font-size: 12px;
         line-height: 1;
         display: inline-flex;
@@ -849,12 +1364,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       }
       .etb-btn:hover {
-        background: #f6f8fa;
-        border-color: #8c959f;
-        color: #0969da;
+        background: var(--bg-hover);
+        border-color: var(--text-muted);
+        color: var(--accent-fg);
       }
       .etb-btn:active {
-        background: #eaeef2;
+        background: var(--bg-active);
       }
       @media screen and (max-width: 768px) {
         .edit-toolbar-wrap {
@@ -892,13 +1407,16 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       </div>
       <div class="sidebar-actions">
         <input type="text" id="sidebar-search" class="sidebar-search-input" placeholder="${SUPPORTED_LANG[lang].searchNotes}" />
+        <button type="button" id="sidebar-quick-search-btn" class="sidebar-qs-btn" title="${lang === 'zh' ? '快速切换 / 全文搜索 (Ctrl+K)' : 'Quick Switch / Full-Text Search (Ctrl+K)'}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </button>
         <button id="sidebar-new-btn" class="sidebar-new-btn">+ ${SUPPORTED_LANG[lang].newNote}</button>
       </div>
       <div class="sidebar-tree" id="sidebar-tree">
-        <div style="padding:16px;color:#8c959f;text-align:center;">${SUPPORTED_LANG[lang].searchNotes}</div>
+        <div style="padding:16px;color:var(--text-muted);text-align:center;">${SUPPORTED_LANG[lang].searchNotes}</div>
       </div>
-      <div class="sidebar-backup-box" style="padding: 10px 14px; border-top: 1px solid #e1e4e8; background: #ffffff;">
-        <button id="sidebar-export-zip-btn" class="sidebar-export-btn" type="button" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 12px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; font-size: 12px; color: #24292f; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+      <div class="sidebar-backup-box">
+        <button id="sidebar-export-zip-btn" class="sidebar-export-btn" type="button">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
@@ -911,12 +1429,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         <div style="display:flex; flex-direction:column; gap:3px; text-align:left;">
           <span>${isPrivateMode ? SUPPORTED_LANG[lang].privateVault : SUPPORTED_LANG[lang].publicVault}</span>
           <div style="display:grid; grid-template-columns:auto auto auto; align-items:baseline; column-gap:4px; row-gap:3px; width:fit-content;">
-            <span style="font-size:11px; color:#8c959f; white-space:nowrap;">${lang === "zh" ? "图片:" : "Images:"}</span>
-            <span id="sidebar-img-quota" style="font-size:11px; color:#8c959f; text-align:center; white-space:nowrap;">0.00MB / 200MB</span>
-            <a href="javascript:void(0)" id="sidebar-open-img-mgr" style="font-size:11px; color:#0969da; text-decoration:none; cursor:pointer; white-space:nowrap; text-align:right; margin-left:4px;">[${lang === "zh" ? "管理" : "Manage"}]</a>
-            <span style="font-size:11px; color:#8c959f; white-space:nowrap;">${lang === "zh" ? "分享:" : "Shares:"}</span>
-            <span id="sidebar-share-stats" style="font-size:11px; color:#8c959f; text-align:center; white-space:nowrap;">0/0 · RAW: 0/0</span>
-            <a href="javascript:void(0)" id="sidebar-open-share-mgr" style="font-size:11px; color:#0969da; text-decoration:none; cursor:pointer; white-space:nowrap; text-align:right; margin-left:4px;">[${lang === "zh" ? "管理" : "Manage"}]</a>
+            <span style="font-size:11px; color:var(--text-muted); white-space:nowrap;">${lang === "zh" ? "图片:" : "Images:"}</span>
+            <span id="sidebar-img-quota" style="font-size:11px; color:var(--text-muted); text-align:center; white-space:nowrap;">0.00MB / 200MB</span>
+            <a href="javascript:void(0)" id="sidebar-open-img-mgr" style="font-size:11px; color:var(--accent-fg); text-decoration:none; cursor:pointer; white-space:nowrap; text-align:right; margin-left:4px;">[${lang === "zh" ? "管理" : "Manage"}]</a>
+            <span style="font-size:11px; color:var(--text-muted); white-space:nowrap;">${lang === "zh" ? "分享:" : "Shares:"}</span>
+            <span id="sidebar-share-stats" style="font-size:11px; color:var(--text-muted); text-align:center; white-space:nowrap;">0/0 · RAW: 0/0</span>
+            <a href="javascript:void(0)" id="sidebar-open-share-mgr" style="font-size:11px; color:var(--accent-fg); text-decoration:none; cursor:pointer; white-space:nowrap; text-align:right; margin-left:4px;">[${lang === "zh" ? "管理" : "Manage"}]</a>
           </div>
         </div>
         ${isPrivateMode ? `<button id="sidebar-logout-btn" class="sidebar-logout-btn">${SUPPORTED_LANG[lang].logout}</button>` : ""}
@@ -965,14 +1483,14 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     ` : ""}
 
     <div class="note-container">
-        <div id="draft-alert" style="display:none; width:100%; max-width:960px; margin:0 auto 12px auto; padding:8px 16px; background:#fff8c5; border:1px solid #d4a72c; border-radius:6px; font-size:13px; color:#573a08; align-items:center; justify-content:space-between; box-shadow:0 1px 4px rgba(0,0,0,0.06); box-sizing:border-box;">
+        <div id="draft-alert" style="display:none; width:100%; max-width:960px; margin:0 auto 12px auto; padding:8px 16px; background:var(--warn-bg); border:1px solid var(--warn-border); border-radius:6px; font-size:13px; color:var(--warn-fg); align-items:center; justify-content:space-between; box-shadow:0 1px 4px rgba(0,0,0,0.06); box-sizing:border-box;">
             <span id="draft-alert-msg">${SUPPORTED_LANG[lang].draftDetected || "检测到本地未保存草稿"}</span>
             <div style="display:flex; gap:8px;">
                 <button id="draft-restore-btn" type="button" class="opt-button" style="background:#2da44e; color:#fff; border-color:#2da44e; padding:3px 12px; font-size:12px; font-weight:500; cursor:pointer;">${SUPPORTED_LANG[lang].restoreDraft || "恢复草稿"}</button>
                 <button id="draft-discard-btn" type="button" class="opt-button" style="padding:3px 10px; font-size:12px; cursor:pointer;">${SUPPORTED_LANG[lang].discardDraft || "放弃"}</button>
             </div>
         </div>
-        ${tips ? `<div class="tips-box" style="width:100%; max-width:960px; margin:0 auto 12px auto; box-sizing:border-box;">${tips.startsWith("<") ? tips : `<div style="background:#fff8c5; border:1px solid #d4a72c; color:#573a08; padding:10px 16px; border-radius:6px; font-size:13px; line-height:1.5;">${tips}</div>`}</div>` : ""}
+        ${tips ? `<div class="tips-box" style="width:100%; max-width:960px; margin:0 auto 12px auto; box-sizing:border-box;">${tips.startsWith("<") ? tips : `<div style="background:var(--warn-bg); border:1px solid var(--warn-border); color:var(--warn-fg); padding:10px 16px; border-radius:6px; font-size:13px; line-height:1.5;">${tips}</div>`}</div>` : ""}
         <div class="stack">
             <div class="layer_1">
                 <div class="layer_2">
@@ -991,6 +1509,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
     ${isEdit && isPrivateMode ? IMAGE_MODAL(lang) : ""}
     ${isEdit && isPrivateMode ? HISTORY_MODAL(lang) : ""}
     ${isEdit && isPrivateMode ? SHARE_MGR_MODAL(lang) : ""}
+    ${isEdit && isPrivateMode ? QUICK_SWITCH_MODAL(lang) : ""}
     ${LIGHTBOX()}
     ${TOC_PANEL(lang)}
     ${FOOTER({ ...ext, isEdit, lang, isPrivateMode, path: title })}
@@ -1043,6 +1562,15 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         if (toggleBtn) toggleBtn.onclick = openSidebar;
         if (closeBtn) closeBtn.onclick = closeSidebar;
         if (overlay) overlay.onclick = closeSidebar;
+        const sidebarQsBtn = document.getElementById("sidebar-quick-search-btn");
+        if (sidebarQsBtn) {
+          sidebarQsBtn.onclick = function() {
+            closeSidebar();
+            if (typeof window.openQuickSwitch === "function") {
+              window.openQuickSwitch("fulltext");
+            }
+          };
+        }
 
         if (logoutBtn) {
           logoutBtn.onclick = async function() {
@@ -1091,13 +1619,14 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             const data = await res.json();
             if (data.err === 0 && Array.isArray(data.data)) {
               allNotes = data.data;
+              window._allNotesCache = allNotes;
               updateSidebarShareStats(allNotes);
               renderTree(allNotes);
             } else {
-              treeContainer.innerHTML = '<div style="color:#cf222e;padding:16px;text-align:center;">' + (data.msg || "加载失败") + '</div>';
+              treeContainer.innerHTML = '<div style="color:var(--danger-fg);padding:16px;text-align:center;">' + (data.msg || "加载失败") + '</div>';
             }
           } catch (e) {
-            treeContainer.innerHTML = '<div style="color:#cf222e;padding:16px;text-align:center;">网络错误</div>';
+            treeContainer.innerHTML = '<div style="color:var(--danger-fg);padding:16px;text-align:center;">网络错误</div>';
           }
         }
 
@@ -1116,7 +1645,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         function renderTree(notes, forceExpand) {
           if (!treeContainer) return;
           if (notes.length === 0) {
-            treeContainer.innerHTML = '<div style="color:#8c959f;padding:16px;text-align:center;">${SUPPORTED_LANG[lang].noNotes}</div>';
+            treeContainer.innerHTML = '<div style="color:var(--text-muted);padding:16px;text-align:center;">${SUPPORTED_LANG[lang].noNotes}</div>';
             return;
           }
 
@@ -1161,7 +1690,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               }
               html += escText(displayName);
               if (note.locked) {
-                html += '    <svg viewBox="0 0 16 16" width="12" height="12" fill="#9a6700" style="margin-left:auto; flex-shrink:0;" title="${lang === "zh" ? "已锁定" : "Locked"}"><path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z"></path></svg>';
+                html += '    <svg viewBox="0 0 16 16" width="12" height="12" fill="var(--warn-fg)" style="margin-left:auto; flex-shrink:0;" title="${lang === "zh" ? "已锁定" : "Locked"}"><path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z"></path></svg>';
               }
               html += '  </a>';
               html += '  <div class="tree-item-actions">';
@@ -1417,12 +1946,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           const currentBurn = typeof isBurn === "boolean" ? isBurn : (shareBurnCheckbox ? shareBurnCheckbox.checked : ${ext.shareBurn ? "true" : "false"});
           let html = "";
           if (currentBurn) {
-            html += '<span style="font-size:11px; padding:1px 6px; border-radius:10px; background:#ffebe9; color:#cf222e; border:1px solid #ffc1c0; font-weight:500;">${SUPPORTED_LANG[lang].burnBadge}</span>';
+            html += '<span style="font-size:11px; padding:1px 6px; border-radius:10px; background:var(--danger-bg); color:var(--danger-fg); border:1px solid var(--danger-border); font-weight:500;">${SUPPORTED_LANG[lang].burnBadge}</span>';
           }
           if (currentTtl > 0) {
             const ttlMap = { 600: "${SUPPORTED_LANG[lang].shareTtl10m}", 3600: "${SUPPORTED_LANG[lang].shareTtl1h}", 86400: "${SUPPORTED_LANG[lang].shareTtl1d}", 604800: "${SUPPORTED_LANG[lang].shareTtl7d}" };
             const ttlText = ttlMap[currentTtl] || (currentTtl + "s");
-            html += '<span style="font-size:11px; padding:1px 6px; border-radius:10px; background:#ddf4ff; color:#0969da; border:1px solid #b6e3ff; font-weight:500;">' + ttlText + '</span>';
+            html += '<span style="font-size:11px; padding:1px 6px; border-radius:10px; background:var(--accent-bg-strong); color:var(--accent-fg); border:1px solid var(--accent-border); font-weight:500;">' + ttlText + '</span>';
           }
           shareBadgesWrap.innerHTML = html;
         }
@@ -1448,8 +1977,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         let isNoteLocked = ${JSON.stringify(!!ext.locked)};
         let isNoteShared = ${JSON.stringify(!!ext.share)};
         let isNoteRawPublic = ${JSON.stringify(!!ext.rawPublic)};
-        const LOCK_SVG_CLOSED = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z"></path></svg>';
-        const LOCK_SVG_OPEN = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M5.5 4a2.5 2.5 0 0 1 4.607-1.346.75.75 0 1 0 1.264-.808A4 4 0 0 0 4 4v2h-.25C2.784 6 2 6.784 2 7.75v5.5C2 14.216 2.784 15 3.75 15h8.5a1.75 1.75 0 0 0 1.75-1.75v-5.5A1.75 1.75 0 0 0 12.25 6H5.5Zm6.75 3.5a.25.25 0 0 1 .25.25v5.5a.25.25 0 0 1-.25.25h-8.5a.25.25 0 0 1-.25-.25v-5.5a.25.25 0 0 1 .25-.25Z"></path></svg>';
+        const LOCK_SVG_CLOSED = '<svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor"><path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z"></path></svg>';
+        const LOCK_SVG_OPEN = '<svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor"><path d="M5.5 4a2.5 2.5 0 0 1 4.607-1.346.75.75 0 1 0 1.264-.808A4 4 0 0 0 4 4v2h-.25C2.784 6 2 6.784 2 7.75v5.5C2 14.216 2.784 15 3.75 15h8.5a1.75 1.75 0 0 0 1.75-1.75v-5.5A1.75 1.75 0 0 0 12.25 6H5.5Zm6.75 3.5a.25.25 0 0 1 .25.25v5.5a.25.25 0 0 1-.25.25h-8.5a.25.25 0 0 1-.25-.25v-5.5a.25.25 0 0 1 .25-.25Z"></path></svg>';
 
         function genRandomAlnum(len) {
           const chars = "23456789abcdefghjkmnpqrstuvwxyz";
@@ -1467,10 +1996,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           if (!shareCustomPw || !noPwCb) return;
           if (noPwCb.checked) {
             shareCustomPw.disabled = true;
-            shareCustomPw.style.background = "#f6f8fa";
+            shareCustomPw.style.background = "var(--bg-subtle)";
           } else {
             shareCustomPw.disabled = false;
-            shareCustomPw.style.background = "#fff";
+            shareCustomPw.style.background = "var(--bg-surface)";
             if (!shareCustomPw.value.trim()) {
               shareCustomPw.value = genRandomCode4();
             }
@@ -1484,9 +2013,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           lockBtn.title = isNoteLocked
             ? "${lang === 'zh' ? '笔记已锁定（点击解锁）' : 'Locked (click to unlock)'}"
             : "${lang === 'zh' ? '锁定笔记（防误触分享）' : 'Lock note'}";
-          lockBtn.style.background = isNoteLocked ? "#fff8c5" : "";
-          lockBtn.style.color = isNoteLocked ? "#9a6700" : "";
-          lockBtn.style.borderColor = isNoteLocked ? "#d4a72c" : "";
+          lockBtn.classList.toggle("opt-locked", isNoteLocked);
         }
 
         function openShareModal() {
@@ -1499,7 +2026,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             const errBox = document.getElementById("share-error-msg");
             if (errBox) { errBox.style.display = "none"; errBox.textContent = ""; }
             if (shareCustomSlug) {
-              shareCustomSlug.style.borderColor = "#d0d7de";
+              shareCustomSlug.style.borderColor = "var(--border-default)";
               if (!shareCustomSlug.value.trim()) {
                 shareCustomSlug.value = genRandomAlnum(6);
               }
@@ -1541,7 +2068,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
           if (shareCustomSlug) {
             shareCustomSlug.oninput = function() {
-              shareCustomSlug.style.borderColor = "#d0d7de";
+              shareCustomSlug.style.borderColor = "var(--border-default)";
               const errBox = document.getElementById("share-error-msg");
               if (errBox) errBox.style.display = "none";
             };
@@ -1550,7 +2077,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           if (randomSlugBtn && shareCustomSlug) {
             randomSlugBtn.onclick = function() {
               shareCustomSlug.value = genRandomAlnum(6);
-              shareCustomSlug.style.borderColor = "#d0d7de";
+              shareCustomSlug.style.borderColor = "var(--border-default)";
               const errBox = document.getElementById("share-error-msg");
               if (errBox) errBox.style.display = "none";
             };
@@ -1624,7 +2151,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               const rawPub = shareRawCheckbox ? shareRawCheckbox.checked : undefined;
               const errBox = document.getElementById("share-error-msg");
               if (errBox) { errBox.style.display = "none"; errBox.textContent = ""; }
-              if (shareCustomSlug) shareCustomSlug.style.borderColor = "#d0d7de";
+              if (shareCustomSlug) shareCustomSlug.style.borderColor = "var(--border-default)";
 
               saveShareBtn.innerText = "保存中...";
               try {
@@ -1665,7 +2192,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                     alert(msg);
                   }
                   if (data.err === 409 && shareCustomSlug) {
-                    shareCustomSlug.style.borderColor = "#cf222e";
+                    shareCustomSlug.style.borderColor = "var(--danger-fg)";
                     shareCustomSlug.focus();
                   }
                 }
@@ -1842,15 +2369,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           for (let i = 0; i < tabs.length; i++) {
             const t = tabs[i];
             if (!t.el) continue;
-            if (shareMgrTab === t.key) {
-              t.el.style.background = "#0969da";
-              t.el.style.color = "#fff";
-              t.el.style.borderColor = "#0969da";
-            } else {
-              t.el.style.background = "#f6f8fa";
-              t.el.style.color = "#57606a";
-              t.el.style.borderColor = "#d0d7de";
-            }
+            t.el.classList.toggle("active", shareMgrTab === t.key);
           }
         }
 
@@ -1868,37 +2387,37 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           let badges = "";
           if (showSharePart && item.share) {
             if (isExpired) {
-              badges += '<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:#fff8c5;color:#9a6700;border:1px solid #d4a72c;">${lang === "zh" ? "分享已过期" : "Expired"}</span>';
+              badges += '<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-border);">${lang === "zh" ? "分享已过期" : "Expired"}</span>';
             } else {
-              badges += '<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:#dafbe1;color:#1a7f37;border:1px solid #aceebb;">${lang === "zh" ? "网页分享" : "Shared"}</span>';
+              badges += '<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:var(--success-bg);color:var(--success-fg);border:1px solid var(--success-border);">${lang === "zh" ? "网页分享" : "Shared"}</span>';
             }
             if (item.hasSharePw) {
-              badges += '<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:#f6f8fa;color:#57606a;border:1px solid #d0d7de;">${lang === "zh" ? "提取码" : "Protected"}</span>';
+              badges += '<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:var(--bg-subtle);color:var(--text-secondary);border:1px solid var(--border-default);">${lang === "zh" ? "提取码" : "Protected"}</span>';
             }
             if (item.shareBurn) {
-              badges += '<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:#ffebe9;color:#cf222e;border:1px solid #ffc1c0;">${lang === "zh" ? "阅后即焚" : "Burn"}</span>';
+              badges += '<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:var(--danger-bg);color:var(--danger-fg);border:1px solid var(--danger-border);">${lang === "zh" ? "阅后即焚" : "Burn"}</span>';
             }
           }
           if (showRawPart && item.rawPublic) {
-            badges += '<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:#ddf4ff;color:#0969da;border:1px solid #b6e3ff;">${lang === "zh" ? "Raw 公开" : "Raw Public"}</span>';
+            badges += '<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:var(--accent-bg-strong);color:var(--accent-fg);border:1px solid var(--accent-border);">${lang === "zh" ? "Raw 公开" : "Raw Public"}</span>';
           }
 
           let shareRow = "";
           if (showSharePart && item.share) {
             const pwInfoHtml = item.hasSharePw
               ? (item.sharePwText
-                ? ' · ${lang === "zh" ? "提取码" : "Code"}: <code style="background:#f6f8fa;border:1px solid #d0d7de;border-radius:4px;padding:0 5px;color:#24292f;font-size:11px;">' + escText(item.sharePwText) + '</code>'
-                : ' · <span style="color:#8c959f;">${lang === "zh" ? "旧版未存明文，重设可见" : "Legacy pw"}</span>')
+                ? ' · ${lang === "zh" ? "提取码" : "Code"}: <code style="background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:4px;padding:0 5px;color:var(--text-body);font-size:11px;">' + escText(item.sharePwText) + '</code>'
+                : ' · <span style="color:var(--text-muted);">${lang === "zh" ? "旧版未存明文，重设可见" : "Legacy pw"}</span>')
               : '';
             const copyPwBtnHtml = (item.hasSharePw && item.sharePwText)
-              ? '<button type="button" class="opt-button" data-sm-action="copy-url" data-url="' + escText(item.sharePwText) + '" style="padding:2px 8px;font-size:11px;background:#fff;color:#24292f;border:1px solid #d0d7de;">${lang === "zh" ? "复制提取码" : "Copy Code"}</button>'
+              ? '<button type="button" class="opt-button sm-btn" data-sm-action="copy-url" data-url="' + escText(item.sharePwText) + '" style="padding:2px 8px;font-size:11px;">${lang === "zh" ? "复制提取码" : "Copy Code"}</button>'
               : '';
-            shareRow = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:6px;border-top:1px dashed #eaecef;margin-top:6px;">' +
-              '<div style="font-size:12px;color:#57606a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px;" title="' + escText(shareUrl) + '">/share/' + escText(item.shareSlug) + pwInfoHtml + '</div>' +
+            shareRow = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:6px;border-top:1px dashed var(--border-soft);margin-top:6px;">' +
+              '<div style="font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px;" title="' + escText(shareUrl) + '">/share/' + escText(item.shareSlug) + pwInfoHtml + '</div>' +
               '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">' +
-                '<button type="button" class="opt-button" data-sm-action="copy-url" data-url="' + escText(shareUrl) + '" style="padding:2px 8px;font-size:11px;background:#fff;color:#24292f;border:1px solid #d0d7de;">${lang === "zh" ? "复制分享" : "Copy Share"}</button>' +
+                '<button type="button" class="opt-button sm-btn" data-sm-action="copy-url" data-url="' + escText(shareUrl) + '" style="padding:2px 8px;font-size:11px;">${lang === "zh" ? "复制分享" : "Copy Share"}</button>' +
                 copyPwBtnHtml +
-                '<button type="button" class="opt-button" data-sm-action="disable-share" data-path="' + encAttrPath + '" style="padding:2px 8px;font-size:11px;background:#fff;color:#cf222e;border:1px solid #d0d7de;">' + (isExpired ? "${lang === 'zh' ? '清理过期' : 'Clean'}" : "${lang === 'zh' ? '关闭分享' : 'Disable Share'}") + '</button>' +
+                '<button type="button" class="opt-button sm-btn" data-sm-action="disable-share" data-path="' + encAttrPath + '" style="padding:2px 8px;font-size:11px;color:var(--danger-fg);">' + (isExpired ? "${lang === 'zh' ? '清理过期' : 'Clean'}" : "${lang === 'zh' ? '关闭分享' : 'Disable Share'}") + '</button>' +
               '</div>' +
             '</div>';
           }
@@ -1906,23 +2425,23 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           let rawRow = "";
           if (showRawPart) {
             const rawBtnText = item.rawPublic ? "${lang === 'zh' ? '关闭 Raw' : 'Disable Raw'}" : "${lang === 'zh' ? '开启 Raw 公开' : 'Enable Raw'}";
-            const rawBtnStyle = item.rawPublic ? "padding:2px 8px;font-size:11px;background:#fff;color:#cf222e;border:1px solid #d0d7de;" : "padding:2px 8px;font-size:11px;background:#f6f8fa;color:#0969da;border:1px solid #d0d7de;";
-            rawRow = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:6px;border-top:1px dashed #eaecef;margin-top:6px;">' +
-              '<div style="font-size:12px;color:#57606a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px;" title="' + escText(rawUrl) + '">' + (item.rawPublic ? ("/raw/" + escText(item.path)) : "${lang === 'zh' ? 'Raw 直读：私有（需鉴权）' : 'Raw: Private'}") + '</div>' +
+            const rawBtnStyle = item.rawPublic ? "padding:2px 8px;font-size:11px;color:var(--danger-fg);" : "padding:2px 8px;font-size:11px;color:var(--accent-fg);";
+            rawRow = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:6px;border-top:1px dashed var(--border-soft);margin-top:6px;">' +
+              '<div style="font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px;" title="' + escText(rawUrl) + '">' + (item.rawPublic ? ("/raw/" + escText(item.path)) : "${lang === 'zh' ? 'Raw 直读：私有（需鉴权）' : 'Raw: Private'}") + '</div>' +
               '<div style="display:flex;gap:6px;flex-shrink:0;">' +
-                (item.rawPublic ? '<button type="button" class="opt-button" data-sm-action="copy-url" data-url="' + escText(rawUrl) + '" style="padding:2px 8px;font-size:11px;background:#fff;color:#24292f;border:1px solid #d0d7de;">${lang === "zh" ? "复制 Raw" : "Copy Raw"}</button>' : '') +
-                '<button type="button" class="opt-button" data-sm-action="toggle-raw" data-path="' + encAttrPath + '" data-next="' + (item.rawPublic ? '0' : '1') + '" style="' + rawBtnStyle + '">' + rawBtnText + '</button>' +
+                (item.rawPublic ? '<button type="button" class="opt-button sm-btn" data-sm-action="copy-url" data-url="' + escText(rawUrl) + '" style="padding:2px 8px;font-size:11px;">${lang === "zh" ? "复制 Raw" : "Copy Raw"}</button>' : '') +
+                '<button type="button" class="opt-button sm-btn" data-sm-action="toggle-raw" data-path="' + encAttrPath + '" data-next="' + (item.rawPublic ? '0' : '1') + '" style="' + rawBtnStyle + '">' + rawBtnText + '</button>' +
               '</div>' +
             '</div>';
           }
 
           const lockIconHtml = item.locked
-            ? '<svg viewBox="0 0 16 16" width="12" height="12" fill="#9a6700" style="flex-shrink:0;" title="${lang === "zh" ? "已锁定" : "Locked"}"><path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z"></path></svg>'
+            ? '<svg viewBox="0 0 16 16" width="12" height="12" fill="var(--warn-fg)" style="flex-shrink:0;" title="${lang === "zh" ? "已锁定" : "Locked"}"><path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z"></path></svg>'
             : '';
 
-          return '<div style="border:1px solid #d0d7de;border-radius:8px;padding:10px 12px;background:#ffffff;">' +
+          return '<div class="sm-card">' +
             '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">' +
-              '<a href="/' + encodedPath + '" title="' + escText(item.path) + '" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#0969da;text-decoration:none;word-break:break-all;">' + safeDisplay + lockIconHtml + '</a>' +
+              '<a href="/' + encodedPath + '" title="' + escText(item.path) + '" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--accent-fg);text-decoration:none;word-break:break-all;">' + safeDisplay + lockIconHtml + '</a>' +
               '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">' + badges + '</div>' +
             '</div>' +
             shareRow +
@@ -1980,7 +2499,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               if (shareMgrTab === "shared") emptyText = "${lang === 'zh' ? '暂无开启网页分享的笔记' : 'No shared notes'}";
               else if (shareMgrTab === "raw") emptyText = "${lang === 'zh' ? '暂无开启 Raw 公开的笔记' : 'No public raw notes'}";
             }
-            shareMgrListEl.innerHTML = '<div style="text-align:center;color:#8c959f;padding:40px 12px;font-size:13px;">' + emptyText + '</div>';
+            shareMgrListEl.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px 12px;font-size:13px;">' + emptyText + '</div>';
             return;
           }
 
@@ -2009,15 +2528,15 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               const contentDisplay = isCollapsed ? "display:none;" : "display:flex;";
 
               html += '<div class="sm-folder" style="display:flex;flex-direction:column;gap:6px;">';
-              html += '  <div class="sm-folder-header" data-sm-folder="' + escText(fullFolderPath) + '" style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;cursor:pointer;user-select:none;">';
+              html += '  <div class="sm-folder-header" data-sm-folder="' + escText(fullFolderPath) + '">';
               html += '    <div style="display:flex;align-items:center;gap:6px;min-width:0;">';
-              html += '      <span style="font-size:10px;color:#57606a;display:inline-block;transition:transform 0.15s;' + arrowTransform + '">▼</span>';
-              html += '      <svg viewBox="0 0 16 16" width="14" height="14" fill="#54aeff" style="flex-shrink:0;"><path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75z"></path></svg>';
-              html += '      <span style="font-size:13px;font-weight:600;color:#24292f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escText(folder.name) + '</span>';
+              html += '      <span style="font-size:10px;color:var(--text-secondary);display:inline-block;transition:transform 0.15s;' + arrowTransform + '">▼</span>';
+              html += '      <svg viewBox="0 0 16 16" width="14" height="14" fill="var(--accent-fg)" style="flex-shrink:0;"><path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75z"></path></svg>';
+              html += '      <span style="font-size:13px;font-weight:600;color:var(--text-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escText(folder.name) + '</span>';
               html += '    </div>';
-              html += '    <span style="font-size:11px;color:#57606a;background:#fff;border:1px solid #d0d7de;border-radius:10px;padding:1px 7px;flex-shrink:0;">' + (shareMgrTab === "all" && stats.active > 0 ? (stats.active + " / " + stats.total) : String(stats.total)) + '</span>';
+              html += '    <span style="font-size:11px;color:var(--text-secondary);background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;padding:1px 7px;flex-shrink:0;">' + (shareMgrTab === "all" && stats.active > 0 ? (stats.active + " / " + stats.total) : String(stats.total)) + '</span>';
               html += '  </div>';
-              html += '  <div style="' + contentDisplay + 'flex-direction:column;gap:8px;padding-left:12px;margin-left:8px;border-left:2px solid #eaecef;">';
+              html += '  <div style="' + contentDisplay + 'flex-direction:column;gap:8px;padding-left:12px;margin-left:8px;border-left:2px solid var(--border-muted);">';
               html += renderTreeNode(folder, fullFolderPath);
               html += '  </div>';
               html += '</div>';
@@ -2036,7 +2555,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
         async function loadShareManagerList(forceRefresh) {
           if (!shareMgrListEl) return;
-          shareMgrListEl.innerHTML = '<div style="text-align:center;color:#8c959f;padding:30px;font-size:13px;">${lang === "zh" ? "正在加载状态..." : "Loading..."}</div>';
+          shareMgrListEl.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px;font-size:13px;">${lang === "zh" ? "正在加载状态..." : "Loading..."}</div>';
           try {
             const resp = await fetch("/api/shares" + (forceRefresh ? "?refresh=1" : ""));
             const res = await resp.json();
@@ -2045,10 +2564,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               updateSidebarShareStats(shareMgrItems);
               renderShareMgrList();
             } else {
-              shareMgrListEl.innerHTML = '<div style="text-align:center;color:#cf222e;padding:30px;font-size:13px;">' + escText(res.msg || "加载失败") + '</div>';
+              shareMgrListEl.innerHTML = '<div style="text-align:center;color:var(--danger-fg);padding:30px;font-size:13px;">' + escText(res.msg || "加载失败") + '</div>';
             }
           } catch (err) {
-            shareMgrListEl.innerHTML = '<div style="text-align:center;color:#cf222e;padding:30px;font-size:13px;">' + escText(err.message) + '</div>';
+            shareMgrListEl.innerHTML = '<div style="text-align:center;color:var(--danger-fg);padding:30px;font-size:13px;">' + escText(err.message) + '</div>';
           }
         }
 
@@ -2263,17 +2782,17 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           if (!toast) {
             toast = document.createElement("div");
             toast.id = "upload-toast";
-            toast.style.cssText = "position:fixed;bottom:65px;right:24px;background:#1f2328;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,0.18);transition:all 0.2s;";
+            toast.style.cssText = "position:fixed;bottom:65px;right:24px;background:var(--toast-bg);color:var(--toast-fg);border:1px solid var(--border-default);padding:8px 16px;border-radius:6px;font-size:12px;z-index:99999;box-shadow:var(--shadow-card);transition:all 0.2s;";
             document.body.appendChild(toast);
           }
           toast.textContent = text;
-          toast.style.background = "#1f2328";
+          toast.style.background = "var(--toast-bg)";
           toast.style.opacity = "1";
           return {
             update: function(msg) { toast.textContent = msg; },
             done: function(msg, isErr) {
               toast.textContent = msg;
-              if (isErr) toast.style.background = "#cf222e";
+              if (isErr) toast.style.background = "var(--danger-fg)";
               setTimeout(function() {
                 toast.style.opacity = "0";
                 setTimeout(function() { if (toast.parentNode) toast.remove(); }, 300);
@@ -2393,7 +2912,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
           const empty = document.getElementById("img-mgr-empty");
           const badge = document.getElementById("img-mgr-quota-badge");
           if (!grid) return;
-          grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:#8c959f;">加载中...</div>';
+          grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text-muted);">加载中...</div>';
           if (empty) empty.style.display = "none";
           try {
             const resp = await fetch("/api/images");
@@ -2418,19 +2937,19 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 const safeName = item.filename.replace(/[^a-zA-Z0-9]/g, '_');
                 const sizeStr = item.size ? (item.size / 1024).toFixed(0) + " KB" : "";
                 return [
-                  '<div class="img-card" id="img-card-' + safeName + '" style="border: 1px solid #e1e4e8; border-radius: 8px; overflow: hidden; background: #f6f8fa; display: flex; flex-direction: column;">',
-                    '<div class="img-preview-box" data-url="' + item.url + '" style="width: 100%; height: 110px; background-image: repeating-conic-gradient(#f0f0f0 0% 25%, #fff 0% 50%) 50% / 16px 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden;" title="点击插入到笔记">',
+                  '<div class="img-card" id="img-card-' + safeName + '" style="border: 1px solid var(--border-muted); border-radius: 8px; overflow: hidden; background: var(--bg-subtle); display: flex; flex-direction: column;">',
+                    '<div class="img-preview-box" data-url="' + item.url + '" title="点击插入到笔记">',
                       '<img src="' + item.url + '" style="max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none;" loading="lazy" />',
                     '</div>',
-                    '<div style="padding: 6px 8px; background: #fff; border-top: 1px solid #e1e4e8; display: flex; flex-direction: column; gap: 4px;">',
-                      '<div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #57606a;">',
+                    '<div style="padding: 6px 8px; background: var(--bg-surface); border-top: 1px solid var(--border-muted); display: flex; flex-direction: column; gap: 4px;">',
+                      '<div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-secondary);">',
                         '<span style="font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70px;" title="' + item.filename + '">' + item.filename + '</span>',
                         '<span>' + sizeStr + '</span>',
                       '</div>',
                       '<div style="display: flex; gap: 4px; margin-top: 2px;">',
                         '<button class="opt-button" data-action="insert" data-url="' + item.url + '" style="flex: 1; min-width: 0; padding: 2px 2px; font-size: 11px; text-align: center; justify-content: center; box-sizing: border-box;">${SUPPORTED_LANG[lang].insertImg || "插入"}</button>',
                         '<button class="opt-button" data-action="copy" data-url="' + item.url + '" style="flex: 1; min-width: 0; padding: 2px 2px; font-size: 11px; text-align: center; justify-content: center; box-sizing: border-box;" title="复制 Markdown">${SUPPORTED_LANG[lang].copy || "复制"}</button>',
-                        '<button class="opt-button" data-action="delete" data-filename="' + item.filename + '" style="flex: 1; min-width: 0; padding: 2px 2px; font-size: 11px; color: #cf222e; text-align: center; justify-content: center; box-sizing: border-box;" title="删除图片">${SUPPORTED_LANG[lang].delete || "删除"}</button>',
+                        '<button class="opt-button" data-action="delete" data-filename="' + item.filename + '" style="flex: 1; min-width: 0; padding: 2px 2px; font-size: 11px; color: var(--danger-fg); text-align: center; justify-content: center; box-sizing: border-box;" title="删除图片">${SUPPORTED_LANG[lang].delete || "删除"}</button>',
                       '</div>',
                     '</div>',
                   '</div>'
@@ -2463,10 +2982,10 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
                 });
               }
             } else {
-              grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#cf222e;padding:20px;">加载失败: ' + (res.msg || "未知错误") + '</div>';
+              grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--danger-fg);padding:20px;">加载失败: ' + (res.msg || "未知错误") + '</div>';
             }
           } catch (e) {
-            grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#cf222e;padding:20px;">网络异常: ' + e.message + '</div>';
+            grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--danger-fg);padding:20px;">网络异常: ' + e.message + '</div>';
           }
         }
 
@@ -2587,8 +3106,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         if (!contents || !vditorEl) return;
 
         function initVditor() {
+          const isDarkInit = document.documentElement && document.documentElement.dataset.theme === "dark";
           window.vditorInstance = new Vditor("vditor", {
             mode: "ir",
+            theme: isDarkInit ? "dark" : "classic",
+            preview: { theme: { current: isDarkInit ? "dark" : "light" } },
             cdn: "//gcore.jsdelivr.net/npm/vditor@3.10.8",
             height: "calc(100vh - 120px)",
             placeholder: contents.getAttribute("placeholder") || "",
@@ -2829,12 +3351,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
 
         async function loadHistorySnapshots() {
           if (!itemsList) return;
-          itemsList.innerHTML = '<div style="padding:16px; color:#8c959f; font-size:12px; text-align:center;">正在加载快照...</div>';
+          itemsList.innerHTML = '<div style="padding:16px; color:var(--text-muted); font-size:12px; text-align:center;">正在加载快照...</div>';
           try {
             const resp = await fetch("/api/history?path=" + encodeURIComponent(currentPath));
             const res = await resp.json();
             if (res.err !== 0) {
-              itemsList.innerHTML = '<div style="padding:16px; color:#cf222e; font-size:12px; text-align:center;">加载失败: ' + (res.msg || "未知错误") + '</div>';
+              itemsList.innerHTML = '<div style="padding:16px; color:var(--danger-fg); font-size:12px; text-align:center;">加载失败: ' + (res.msg || "未知错误") + '</div>';
               return;
             }
             currentSnapshots = res.data || [];
@@ -2852,23 +3374,19 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
             }
             currentSnapshots.forEach((snap, idx) => {
               const item = document.createElement("div");
-              item.style.cssText = "padding:8px 10px; border:1px solid #d0d7de; border-radius:6px; cursor:pointer; background:#fff; transition:all 0.15s ease; text-align:left;";
+              item.className = "history-snap-item";
               const sizeKb = (snap.size / 1024).toFixed(1);
               item.innerHTML = [
-                '<div style="font-size:12px; font-weight:600; color:#1f2328; margin-bottom:2px;">' + escHistText(snap.dateStr || ("历史版本 " + (idx + 1))) + '</div>',
-                '<div style="font-size:11px; color:#57606a; margin-bottom:4px;">大小: ' + snap.size + ' 字符 (' + sizeKb + ' KB)</div>',
-                '<div style="font-size:11px; color:#8c959f; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escHistText(snap.preview || "(无预览)") + '</div>'
+                '<div style="font-size:12px; font-weight:600; color:var(--text-primary); margin-bottom:2px;">' + escHistText(snap.dateStr || ("历史版本 " + (idx + 1))) + '</div>',
+                '<div style="font-size:11px; color:var(--text-secondary); margin-bottom:4px;">大小: ' + snap.size + ' 字符 (' + sizeKb + ' KB)</div>',
+                '<div style="font-size:11px; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escHistText(snap.preview || "(无预览)") + '</div>'
               ].join("");
 
-              item.onmouseenter = function() { if (selectedSnapshot !== snap) item.style.background = "#f6f8fa"; };
-              item.onmouseleave = function() { if (selectedSnapshot !== snap) item.style.background = "#fff"; };
               item.onclick = function() {
                 Array.from(itemsList.children).forEach(el => {
-                  el.style.borderColor = "#d0d7de";
-                  el.style.background = "#fff";
+                  el.classList.remove("selected");
                 });
-                item.style.borderColor = "#0969da";
-                item.style.background = "#f0f6fc";
+                item.classList.add("selected");
                 selectSnapshot(snap);
               };
               itemsList.appendChild(item);
@@ -2878,7 +3396,7 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
               itemsList.firstChild.click();
             }
           } catch(err) {
-            itemsList.innerHTML = '<div style="padding:16px; color:#cf222e; font-size:12px; text-align:center;">网络异常: ' + err.message + '</div>';
+            itemsList.innerHTML = '<div style="padding:16px; color:var(--danger-fg); font-size:12px; text-align:center;">网络异常: ' + err.message + '</div>';
           }
         }
 
@@ -3291,10 +3809,471 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         }
       })();
     <\/script>
+    ${isEdit ? SAVE_SHORTCUT_SCRIPT(lang) : ""}
+    ${isEdit && isPrivateMode ? QUICK_SWITCH_SCRIPT(lang) : ""}
+    ${THEME_CONTROLLER_SCRIPT(lang)}
 </body>
 </html>
 `;
   };
+
+const SAVE_SHORTCUT_SCRIPT = (lang) => `
+    <script>
+      (function() {
+        const contents = document.querySelector("#contents");
+        const draftAlert = document.getElementById("draft-alert");
+        const currentPath = decodeURIComponent(window.location.pathname.replace(new RegExp("^/+|/+$", "g"), ""));
+        if (!contents || !currentPath || currentPath.startsWith("api") || currentPath.startsWith("share")) return;
+
+        window.showActionToast = function(msg, isError) {
+          let toastEl = document.getElementById("action-toast");
+          if (!toastEl) {
+            toastEl = document.createElement("div");
+            toastEl.id = "action-toast";
+            document.body.appendChild(toastEl);
+          }
+          toastEl.className = isError ? "error" : "";
+          toastEl.textContent = msg || "";
+          toastEl.style.opacity = "1";
+          clearTimeout(toastEl._hideTimer);
+          toastEl._hideTimer = setTimeout(function() {
+            if (toastEl) toastEl.style.opacity = "0";
+          }, 1800);
+        };
+
+        let isSavingNow = false;
+        window.saveNoteNow = async function() {
+          if (isSavingNow) return;
+          isSavingNow = true;
+          try {
+            let val = contents.value || "";
+            if (window.vditorInstance && typeof window.vditorInstance.getValue === "function") {
+              val = window.vditorInstance.getValue();
+              contents.value = val;
+            }
+            window.showActionToast("${SUPPORTED_LANG[lang].savingNow}");
+            const resp = await fetch(window.location.pathname, {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+              body: "t=" + encodeURIComponent(val)
+            });
+            const res = await resp.json();
+            if (res && res.err === 0) {
+              window._cloudContent = val;
+              try { localStorage.removeItem("scn_draft_" + encodeURIComponent(currentPath)); } catch (e) {}
+              if (draftAlert) draftAlert.style.display = "none";
+              const lmEl = document.querySelector(".footer .last-modified");
+              if (lmEl) lmEl.textContent = "${SUPPORTED_LANG[lang].lastModified}: ${SUPPORTED_LANG[lang].savedNow}";
+              if (Array.isArray(window._searchIndexCache)) {
+                const nowSec = Math.floor(Date.now() / 1000);
+                const normVal = String(val || "").replace(/\\r\\n?/g, "\\n").replace(/[ \\t]+/g, " ").trim().slice(0, 30000);
+                window._searchIndexCache = window._searchIndexCache.filter(function(it) { return it && it.path !== currentPath; });
+                window._searchIndexCache.unshift({ path: currentPath, text: normVal, updateAt: nowSec });
+              }
+              window.showActionToast("${SUPPORTED_LANG[lang].savedNow}");
+            } else {
+              window.showActionToast((res && res.msg) || "${SUPPORTED_LANG[lang].saveFailed}", true);
+            }
+          } catch (err) {
+            window.showActionToast("${SUPPORTED_LANG[lang].saveFailed}: " + (err && err.message ? err.message : ""), true);
+          } finally {
+            isSavingNow = false;
+          }
+        };
+
+        document.addEventListener("keydown", function(e) {
+          if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "s" || e.key === "S")) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof window.saveNoteNow === "function") {
+              window.saveNoteNow();
+            }
+          }
+        }, true);
+      })();
+    <\/script>
+`;
+
+const QUICK_SWITCH_SCRIPT = (lang) => `
+    <script>
+      (function() {
+        const qsModal = document.getElementById("quick-switch-modal");
+        if (!qsModal) return;
+        const qsMask = document.getElementById("quick-switch-mask");
+        const qsInput = document.getElementById("qs-input");
+        const qsModeTitle = document.getElementById("qs-mode-title");
+        const qsModeFull = document.getElementById("qs-mode-fulltext");
+        const qsRefreshBtn = document.getElementById("qs-refresh-btn");
+        const qsCloseBtn = document.getElementById("qs-close-btn");
+        const qsStatus = document.getElementById("qs-status");
+        const qsResults = document.getElementById("qs-results");
+
+        let qsMode = "title";
+        let qsList = [];
+        let qsActiveIdx = 0;
+        let qsSearchTimer = null;
+
+        function escQs(s) {
+          return String(s || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        function encodeQsPath(p) {
+          return String(p || "").split("/").map(function(seg) { return encodeURIComponent(seg); }).join("/");
+        }
+
+        function splitTokens(q) {
+          return String(q || "")
+            .toLowerCase()
+            .trim()
+            .split(new RegExp("[" + String.fromCharCode(32, 9, 10, 13) + "]+"))
+            .filter(Boolean);
+        }
+
+        function highlightSafe(src, tokens) {
+          const text = String(src || "");
+          if (!tokens || !tokens.length) return escQs(text);
+          const lower = text.toLowerCase();
+          const ranges = [];
+          for (let i = 0; i < tokens.length; i++) {
+            const tok = tokens[i];
+            if (!tok) continue;
+            let from = 0;
+            while (true) {
+              const idx = lower.indexOf(tok, from);
+              if (idx === -1) break;
+              ranges.push([idx, idx + tok.length]);
+              from = idx + tok.length;
+              if (ranges.length > 60) break;
+            }
+          }
+          if (!ranges.length) return escQs(text);
+          ranges.sort(function(a, b) { return a[0] - b[0] || b[1] - a[1]; });
+          const merged = [];
+          for (let i = 0; i < ranges.length; i++) {
+            const r = ranges[i];
+            if (!merged.length || r[0] > merged[merged.length - 1][1]) {
+              merged.push([r[0], r[1]]);
+            } else if (r[1] > merged[merged.length - 1][1]) {
+              merged[merged.length - 1][1] = r[1];
+            }
+          }
+          let out = "";
+          let cursor = 0;
+          for (let i = 0; i < merged.length; i++) {
+            const m = merged[i];
+            if (m[0] > cursor) out += escQs(text.slice(cursor, m[0]));
+            out += '<mark class="qs-hl">' + escQs(text.slice(m[0], m[1])) + '</mark>';
+            cursor = m[1];
+          }
+          if (cursor < text.length) out += escQs(text.slice(cursor));
+          return out;
+        }
+
+        function makeSnippet(bodyText, tokens) {
+          const clean = String(bodyText || "").replace(new RegExp("[" + String.fromCharCode(10, 13) + "]+", "g"), " ");
+          if (!clean) return "";
+          if (!tokens || !tokens.length) return clean.slice(0, 110);
+          const lower = clean.toLowerCase();
+          let firstIdx = -1;
+          for (let i = 0; i < tokens.length; i++) {
+            const pos = lower.indexOf(tokens[i]);
+            if (pos !== -1 && (firstIdx === -1 || pos < firstIdx)) firstIdx = pos;
+          }
+          if (firstIdx === -1) return clean.slice(0, 110);
+          const start = Math.max(0, firstIdx - 32);
+          const end = Math.min(clean.length, start + 130);
+          return (start > 0 ? "..." : "") + clean.slice(start, end) + (end < clean.length ? "..." : "");
+        }
+
+        async function loadTitleNotes() {
+          if (Array.isArray(window._allNotesCache) && window._allNotesCache.length > 0) {
+            return window._allNotesCache;
+          }
+          const resp = await fetch("/api/notes");
+          const res = await resp.json();
+          if (res.err === 0 && Array.isArray(res.data)) {
+            window._allNotesCache = res.data;
+            return res.data;
+          }
+          return [];
+        }
+
+        async function loadFullTextIndex(forceRefresh) {
+          if (!forceRefresh && Array.isArray(window._searchIndexCache)) {
+            return window._searchIndexCache;
+          }
+          if (qsStatus) qsStatus.textContent = "${SUPPORTED_LANG[lang].searchIndexing}";
+          const resp = await fetch("/api/search-index" + (forceRefresh ? "?refresh=1" : ""));
+          const res = await resp.json();
+          if (res.err === 0 && Array.isArray(res.data)) {
+            window._searchIndexCache = res.data;
+            return res.data;
+          }
+          throw new Error(res.msg || "Load failed");
+        }
+
+        function syncQsModeUI() {
+          if (qsModeTitle) qsModeTitle.classList.toggle("active", qsMode === "title");
+          if (qsModeFull) qsModeFull.classList.toggle("active", qsMode === "fulltext");
+          if (qsRefreshBtn) qsRefreshBtn.style.display = qsMode === "fulltext" ? "inline-flex" : "none";
+          if (qsInput) {
+            qsInput.placeholder = qsMode === "fulltext"
+              ? "${SUPPORTED_LANG[lang].quickSwitchFullPh}"
+              : "${SUPPORTED_LANG[lang].quickSwitchPh}";
+          }
+        }
+
+        function renderQsItems(tokens) {
+          if (!qsResults) return;
+          if (!qsList.length) {
+            qsResults.innerHTML = '<div class="qs-empty">${SUPPORTED_LANG[lang].searchNoMatch}</div>';
+            return;
+          }
+          if (qsActiveIdx >= qsList.length) qsActiveIdx = 0;
+          if (qsActiveIdx < 0) qsActiveIdx = qsList.length - 1;
+
+          let html = "";
+          const curPath = decodeURIComponent(window.location.pathname.replace(new RegExp("^/+|/+$", "g"), ""));
+          for (let i = 0; i < qsList.length; i++) {
+            const item = qsList[i];
+            const isAct = i === qsActiveIdx;
+            const isCur = item.path === curPath;
+            const badge = isCur ? "${lang === 'zh' ? '当前' : 'Current'}" : (item.matchScope === "body" ? "${lang === 'zh' ? '正文命中' : 'Body'}" : "");
+            html += '<a class="qs-item' + (isAct ? ' active' : '') + '" data-qs-idx="' + i + '" href="/' + encodeQsPath(item.path) + '">';
+            html += '  <div class="qs-item-head">';
+            html += '    <span class="qs-item-path">' + highlightSafe(item.path, tokens) + '</span>';
+            if (badge) html += '    <span class="qs-item-badge">' + escQs(badge) + '</span>';
+            html += '  </div>';
+            if (qsMode === "fulltext" && item.snippet) {
+              html += '  <div class="qs-snippet">' + highlightSafe(item.snippet, tokens) + '</div>';
+            }
+            html += '</a>';
+          }
+          qsResults.innerHTML = html;
+
+          const activeEl = qsResults.querySelector(".qs-item.active");
+          if (activeEl && typeof activeEl.scrollIntoView === "function") {
+            activeEl.scrollIntoView({ block: "nearest" });
+          }
+        }
+
+        async function runQsSearch(forceRefreshIndex) {
+          const rawQ = qsInput ? qsInput.value : "";
+          const tokens = splitTokens(rawQ);
+          try {
+            if (qsMode === "title") {
+              const notes = await loadTitleNotes();
+              const matched = tokens.length === 0
+                ? notes.slice(0, 60)
+                : notes.filter(function(n) {
+                    const p = String(n.path || "").toLowerCase();
+                    return tokens.every(function(tok) { return p.indexOf(tok) !== -1; });
+                  }).slice(0, 60);
+              qsList = matched.map(function(n) { return { path: n.path, matchScope: "path" }; });
+              qsActiveIdx = 0;
+              if (qsStatus) {
+                qsStatus.textContent = "${lang === 'zh' ? '路径匹配：' : 'Path matches: '}" + qsList.length + " / " + notes.length;
+              }
+              renderQsItems(tokens);
+            } else {
+              const idxItems = await loadFullTextIndex(!!forceRefreshIndex);
+              const matched = [];
+              for (let i = 0; i < idxItems.length; i++) {
+                const it = idxItems[i];
+                if (!it || !it.path) continue;
+                const pLow = it.path.toLowerCase();
+                const bLow = String(it.text || "").toLowerCase();
+                if (tokens.length === 0) {
+                  matched.push({ path: it.path, snippet: makeSnippet(it.text, []), matchScope: "path", score: 0 });
+                  continue;
+                }
+                const pathAllHit = tokens.every(function(tok) { return pLow.indexOf(tok) !== -1; });
+                const bothHit = pathAllHit || tokens.every(function(tok) { return pLow.indexOf(tok) !== -1 || bLow.indexOf(tok) !== -1; });
+                if (bothHit) {
+                  const snippet = makeSnippet(it.text, tokens);
+                  matched.push({
+                    path: it.path,
+                    snippet: snippet,
+                    matchScope: pathAllHit ? "path" : "body",
+                    score: pathAllHit ? 2 : 1
+                  });
+                }
+              }
+              matched.sort(function(a, b) { return b.score - a.score; });
+              qsList = matched.slice(0, 60);
+              qsActiveIdx = 0;
+              if (qsStatus) {
+                qsStatus.textContent = "${lang === 'zh' ? '全文索引匹配：' : 'Full-text matches: '}" + qsList.length + " / " + idxItems.length;
+              }
+              renderQsItems(tokens);
+            }
+          } catch (err) {
+            if (qsStatus) qsStatus.textContent = "${lang === 'zh' ? '加载失败: ' : 'Load failed: '}" + (err && err.message ? err.message : "");
+            if (qsResults) qsResults.innerHTML = '<div class="qs-empty" style="color:var(--danger-fg);">' + escQs(err && err.message ? err.message : "Error") + '</div>';
+          }
+        }
+
+        window.openQuickSwitch = function(initialMode) {
+          if (initialMode === "title" || initialMode === "fulltext") {
+            qsMode = initialMode;
+          }
+          syncQsModeUI();
+          qsModal.style.display = "flex";
+          if (qsInput) {
+            qsInput.focus();
+            qsInput.select();
+          }
+          runQsSearch(false);
+        };
+
+        window.closeQuickSwitch = function() {
+          qsModal.style.display = "none";
+        };
+
+        if (qsMask) qsMask.onclick = window.closeQuickSwitch;
+        if (qsCloseBtn) qsCloseBtn.onclick = window.closeQuickSwitch;
+        if (qsModeTitle) {
+          qsModeTitle.onclick = function() {
+            qsMode = "title";
+            syncQsModeUI();
+            if (qsInput) qsInput.focus();
+            runQsSearch(false);
+          };
+        }
+        if (qsModeFull) {
+          qsModeFull.onclick = function() {
+            qsMode = "fulltext";
+            syncQsModeUI();
+            if (qsInput) qsInput.focus();
+            runQsSearch(false);
+          };
+        }
+        if (qsRefreshBtn) {
+          qsRefreshBtn.onclick = function() {
+            if (qsInput) qsInput.focus();
+            runQsSearch(true);
+          };
+        }
+        if (qsInput) {
+          qsInput.oninput = function() {
+            clearTimeout(qsSearchTimer);
+            const delay = qsMode === "fulltext" ? 120 : 0;
+            qsSearchTimer = setTimeout(function() { runQsSearch(false); }, delay);
+          };
+        }
+
+        document.addEventListener("keydown", function(e) {
+          if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "k" || e.key === "K")) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (qsModal.style.display === "flex") {
+              window.closeQuickSwitch();
+            } else {
+              window.openQuickSwitch();
+            }
+            return;
+          }
+          if (qsModal.style.display !== "flex") return;
+
+          if (e.key === "Escape") {
+            e.preventDefault();
+            e.stopPropagation();
+            window.closeQuickSwitch();
+          } else if (e.key === "Tab") {
+            e.preventDefault();
+            e.stopPropagation();
+            qsMode = qsMode === "title" ? "fulltext" : "title";
+            syncQsModeUI();
+            runQsSearch(false);
+          } else if (e.key === "ArrowDown") {
+            if (!qsList.length) return;
+            e.preventDefault();
+            e.stopPropagation();
+            qsActiveIdx = (qsActiveIdx + 1) % qsList.length;
+            renderQsItems(splitTokens(qsInput ? qsInput.value : ""));
+          } else if (e.key === "ArrowUp") {
+            if (!qsList.length) return;
+            e.preventDefault();
+            e.stopPropagation();
+            qsActiveIdx = (qsActiveIdx - 1 + qsList.length) % qsList.length;
+            renderQsItems(splitTokens(qsInput ? qsInput.value : ""));
+          } else if (e.key === "Enter") {
+            if (!qsList.length) return;
+            const chosen = qsList[qsActiveIdx] || qsList[0];
+            if (chosen && chosen.path) {
+              e.preventDefault();
+              e.stopPropagation();
+              window.location.href = "/" + encodeQsPath(chosen.path);
+            }
+          }
+        }, true);
+      })();
+    <\/script>
+`;
+
+const THEME_CONTROLLER_SCRIPT = (lang) => `
+    <script>
+      (function() {
+        const themeBtn = document.getElementById("theme-toggle-btn");
+        const mql = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+        const ICON_AUTO = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>';
+        const ICON_DARK = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+        const ICON_LIGHT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
+        const TITLES = {
+          auto: "${SUPPORTED_LANG[lang].themeAuto}",
+          dark: "${SUPPORTED_LANG[lang].themeDark}",
+          light: "${SUPPORTED_LANG[lang].themeLight}"
+        };
+
+        window.applyThemeMode = function(mode, persist) {
+          const validMode = (mode === "dark" || mode === "light") ? mode : "auto";
+          const isDark = validMode === "dark" || (validMode === "auto" && mql && mql.matches);
+          const resolved = isDark ? "dark" : "light";
+          document.documentElement.dataset.themeMode = validMode;
+          document.documentElement.dataset.theme = resolved;
+          if (persist !== false) {
+            try { localStorage.setItem("scn_theme", validMode); } catch (e) {}
+          }
+          if (themeBtn) {
+            themeBtn.innerHTML = validMode === "dark" ? ICON_DARK : (validMode === "light" ? ICON_LIGHT : ICON_AUTO);
+            themeBtn.title = TITLES[validMode] || TITLES.auto;
+          }
+          if (window.vditorInstance && typeof window.vditorInstance.setTheme === "function") {
+            try {
+              window.vditorInstance.setTheme(isDark ? "dark" : "classic", isDark ? "dark" : "light");
+            } catch (e) {}
+          }
+        };
+
+        let initMode = "auto";
+        try { initMode = localStorage.getItem("scn_theme") || "auto"; } catch (e) {}
+        window.applyThemeMode(initMode, false);
+
+        if (themeBtn) {
+          themeBtn.onclick = function() {
+            const cur = document.documentElement.dataset.themeMode || "auto";
+            const next = cur === "auto" ? "dark" : (cur === "dark" ? "light" : "auto");
+            window.applyThemeMode(next, true);
+          };
+        }
+
+        if (mql) {
+          const onSystemChange = function() {
+            if ((document.documentElement.dataset.themeMode || "auto") === "auto") {
+              window.applyThemeMode("auto", false);
+            }
+          };
+          if (typeof mql.addEventListener === "function") mql.addEventListener("change", onSystemChange);
+          else if (typeof mql.addListener === "function") mql.addListener(onSystemChange);
+        }
+      })();
+    <\/script>
+`;
 const Edit = (data) => HTML({ isEdit: true, ...data });
 const Share = (data) => HTML({ isEdit: false, ...data });
 const NeedPasswd = (data) => HTML({ tips: SUPPORTED_LANG[data.lang].tipEncrypt, showPwPrompt: true, ...data });

@@ -1,7 +1,7 @@
 import { getI18n, returnJSON, safeDecode } from "./constants.js";
 import { returnPage } from "./templates.js";
 import {
-  handleRoot, handleLogin, handleLogout, handleNotes, handleShares, handleList,
+  handleRoot, handleLogin, handleLogout, handleNotes, handleSearchIndex, handleShares, handleList,
   handleShareView, handleShareAuth, handleNoteDelete, handleNoteAuth, handleNotePw,
   handleNoteSetting, handleNoteSave, handleNoteView, handleNoteRaw, handleNoteRename
 } from "./handlers-notes.js";
@@ -29,6 +29,9 @@ import {
     }
     if (method === "GET" && pathname === "/api/notes") {
       return handleNotes(cfg, request);
+    }
+    if (method === "GET" && pathname === "/api/search-index") {
+      return handleSearchIndex(cfg, request);
     }
     if (method === "POST" && pathname === "/api/notes/rename") {
       return handleNoteRename(cfg, request);

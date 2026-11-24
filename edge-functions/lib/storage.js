@@ -180,6 +180,108 @@ export function formatNoteIndexItem(path, metadata) {
     }
   }
 
+  const SEARCH_INDEX_KEY = "stat/search_index";
+
+  function normalizeSearchText(value) {
+    return String(value || "")
+      .replace(/\r\n?/g, "\n")
+      .replace(/[ \t]+/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+      .slice(0, 30000);
+  }
+
+  export async function rebuildSearchIndex() {
+    const { blobs } = await store.list({ prefix: "notes/", consistency: "strong" });
+    const entries = await Promise.all((blobs || []).map(async (blob) => {
+      const notePath = blob.key.slice("notes/".length);
+      let text = "";
+      let updateAt = 0;
+      try {
+        const data = await store.get(blob.key, { type: "json", consistency: "strong" });
+        if (data && typeof data === "object") {
+          text = normalizeSearchText(data.value || "");
+          updateAt = data.metadata?.updateAt || 0;
+        }
+      } catch (err) {}
+      return { path: notePath, text, updateAt };
+    }));
+    entries.sort((a, b) => (b.updateAt || 0) - (a.updateAt || 0));
+    await store.setJSON(SEARCH_INDEX_KEY, entries);
+    return entries;
+  }
+
+  export async function getSearchIndex(forceRefresh = false) {
+    if (!forceRefresh) {
+      try {
+        const cached = await store.get(SEARCH_INDEX_KEY, { type: "json", consistency: "strong" });
+        if (Array.isArray(cached)) return cached;
+      } catch (e) {
+        console.warn("getSearchIndex read failed, rebuilding:", e.message);
+      }
+    }
+    return await rebuildSearchIndex();
+  }
+
+  export async function upsertSearchIndex(path, value, updateAt = 0) {
+    try {
+      const list = await store.get(SEARCH_INDEX_KEY, { type: "json", consistency: "strong" });
+      if (!Array.isArray(list)) {
+        await rebuildSearchIndex();
+        return;
+      }
+      const nextText = normalizeSearchText(value);
+      const existing = list.find((item) => item && item.path === path);
+      if (existing && existing.text === nextText && (!updateAt || existing.updateAt === updateAt)) {
+        return;
+      }
+      const next = list.filter((item) => item && item.path !== path);
+      next.unshift({
+        path,
+        text: nextText,
+        updateAt: updateAt || existing?.updateAt || 0
+      });
+      next.sort((a, b) => (b.updateAt || 0) - (a.updateAt || 0));
+      await store.setJSON(SEARCH_INDEX_KEY, next);
+    } catch (e) {
+      console.warn("upsertSearchIndex error:", e);
+    }
+  }
+
+  export async function removeSearchIndex(path) {
+    try {
+      const list = await store.get(SEARCH_INDEX_KEY, { type: "json", consistency: "strong" });
+      if (!Array.isArray(list)) return;
+      const next = list.filter((item) => item && item.path !== path);
+      if (next.length !== list.length) {
+        await store.setJSON(SEARCH_INDEX_KEY, next);
+      }
+    } catch (e) {
+      console.warn("removeSearchIndex error:", e);
+    }
+  }
+
+  export async function renameSearchIndex(oldPath, newPath, fallbackValue = "", fallbackUpdateAt = 0) {
+    try {
+      const list = await store.get(SEARCH_INDEX_KEY, { type: "json", consistency: "strong" });
+      if (!Array.isArray(list)) {
+        await rebuildSearchIndex();
+        return;
+      }
+      const existing = list.find((item) => item && item.path === oldPath);
+      const next = list.filter((item) => item && item.path !== oldPath && item.path !== newPath);
+      next.unshift({
+        path: newPath,
+        text: existing ? existing.text : normalizeSearchText(fallbackValue),
+        updateAt: existing ? existing.updateAt : fallbackUpdateAt
+      });
+      next.sort((a, b) => (b.updateAt || 0) - (a.updateAt || 0));
+      await store.setJSON(SEARCH_INDEX_KEY, next);
+    } catch (e) {
+      console.warn("renameSearchIndex error:", e);
+    }
+  }
+
 
   export async function deleteShareKeys(cfg, slug, path, storedSlug) {
     const keys = new Set();

@@ -1,6 +1,6 @@
 import { dayjs, cookie, jwt } from "./vendor.js";
 import { SUPPORTED_LANG, escapeHtml, genRandomStr, getI18n, isHttpsRequest, getClientIp, returnJSON } from "./constants.js";
-import { store, MD5, saltPw, kvGet, kvPut, kvDelete, queryNote, putNote, getNotesIndex, rebuildNotesIndex, removeNoteIndex, deleteShareKeys, cleanupExpiredShareNote, checkAuthRateLimit, recordAuthFailure } from "./storage.js";
+import { store, MD5, saltPw, kvGet, kvPut, kvDelete, queryNote, putNote, getNotesIndex, rebuildNotesIndex, removeNoteIndex, getSearchIndex, upsertSearchIndex, removeSearchIndex, renameSearchIndex, deleteShareKeys, cleanupExpiredShareNote, checkAuthRateLimit, recordAuthFailure } from "./storage.js";
 import { checkAuth, checkAdminAuth, verifyNoteAccess } from "./auth.js";
 import { returnPage } from "./templates.js";
 
@@ -93,6 +93,27 @@ import { returnPage } from "./templates.js";
         notes = await rebuildNotesIndex();
       }
       return returnJSON(0, notes);
+    } catch (err) {
+      return returnJSON(500, err.message);
+    }
+  }
+
+  // 4.1 Full-text Search Index (stat/search_index)
+  export async function handleSearchIndex(cfg, request) {
+    if (cfg.adminPassword) {
+      const isAdmin = await checkAdminAuth(cfg, request);
+      if (!isAdmin) {
+        return returnJSON(401, "Unauthorized");
+      }
+    } else {
+      return returnJSON(403, "Full-text search is restricted to private vault mode.");
+    }
+
+    try {
+      const url = new URL(request.url);
+      const forceRefresh = url.searchParams.get("refresh") === "1" || url.searchParams.get("sync") === "1";
+      const entries = await getSearchIndex(forceRefresh);
+      return returnJSON(0, entries);
     } catch (err) {
       return returnJSON(500, err.message);
     }
@@ -417,6 +438,7 @@ import { returnPage } from "./templates.js";
     try {
       await store.delete(`notes/${path}`);
       await removeNoteIndex(path);
+      await removeSearchIndex(path);
       await deleteShareKeys(cfg, metadata.shareSlug, path, null);
 
       const ip = getClientIp(request);
@@ -765,10 +787,14 @@ import { returnPage } from "./templates.js";
     }
 
     try {
+      const nextUpdateAt = (0, dayjs)().unix();
       await putNote(path, content, {
         ...metadata,
-        updateAt: (0, dayjs)().unix()
+        updateAt: nextUpdateAt
       });
+      if (content !== value || (!value && (!metadata || Object.keys(metadata).length === 0))) {
+        await upsertSearchIndex(path, content, nextUpdateAt);
+      }
       if (isCurl || wantsRaw) {
         return new Response(`OK: Saved to /${path} (${(content || "").length} bytes)\n`, {
           status: 200,
@@ -922,6 +948,7 @@ import { returnPage } from "./templates.js";
       await putNote(newPath, oldNote.value || "", oldMeta);
       await store.delete(`notes/${oldPath}`);
       await removeNoteIndex(oldPath);
+      await renameSearchIndex(oldPath, newPath, oldNote.value || "", oldMeta.updateAt || 0);
 
       if (oldMeta.share && oldMeta.shareSlug) {
         try {

@@ -71,7 +71,21 @@ export const SUPPORTED_LANG = {
       generatingZip: "Compressing archive...",
       exportSuccess: "Backup downloaded!",
       exportFail: "Export failed",
-      noNotesToExport: "No notes found in vault to export"
+      noNotesToExport: "No notes found in vault to export",
+      savedNow: "Saved",
+      savingNow: "Saving...",
+      saveFailed: "Save failed",
+      quickSwitchTitle: "Quick Switch & Search",
+      quickSwitchPh: "Search note path (Ctrl+K)...",
+      quickSwitchFullPh: "Full-text search note titles and content...",
+      searchTitleOnly: "Path",
+      searchFullText: "Full Text",
+      searchIndexing: "Loading search index...",
+      searchNoMatch: "No matching notes found",
+      searchRefresh: "Rebuild Index",
+      themeLight: "Theme: Light (click for Auto)",
+      themeDark: "Theme: Dark (click for Light)",
+      themeAuto: "Theme: System (click for Dark)"
     },
     "zh": {
       setPW: "设置密码",
@@ -144,7 +158,21 @@ export const SUPPORTED_LANG = {
       discardDraft: "放弃",
       wordsCount: "字数",
       charsCount: "字符",
-      linesCount: "行"
+      linesCount: "行",
+      savedNow: "已保存",
+      savingNow: "正在保存...",
+      saveFailed: "保存失败",
+      quickSwitchTitle: "快速切换与全文搜索",
+      quickSwitchPh: "输入笔记名称/路径快速跳转 (Ctrl+K)...",
+      quickSwitchFullPh: "输入关键词搜索笔记标题与正文内容...",
+      searchTitleOnly: "仅路径",
+      searchFullText: "全文搜索",
+      searchIndexing: "正在加载正文索引...",
+      searchNoMatch: "未找到匹配的笔记",
+      searchRefresh: "重建索引",
+      themeLight: "主题：浅色（点击切为跟随系统）",
+      themeDark: "主题：深色（点击切为浅色）",
+      themeAuto: "主题：跟随系统（点击切为深色）"
     }
   };
 export const escapeHtml = (str) => String(str ?? "")
