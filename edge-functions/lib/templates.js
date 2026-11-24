@@ -359,8 +359,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         transition: all 0.2s ease;
         box-shadow: var(--shadow-sm);
         font-size: 16px;
+        opacity: 0.8;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
       }
       .sidebar-toggle-btn:hover {
+        opacity: 1;
         background: var(--bg-surface);
         color: var(--text-primary);
         border-color: var(--text-muted);
@@ -1050,12 +1054,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       .footer .footer-icon-group {
         display: inline-flex !important;
         align-items: center !important;
-        gap: 4px !important;
+        gap: 2px !important;
       }
       .footer .theme-toggle-btn,
       .footer .github-link {
-        width: 24px !important;
-        height: 24px !important;
+        width: 20px !important;
+        height: 20px !important;
         padding: 0 !important;
         margin: 0 !important;
         box-sizing: border-box !important;
@@ -1089,8 +1093,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       }
       .footer .theme-toggle-btn svg,
       .footer .github-link svg {
-        width: 15px !important;
-        height: 15px !important;
+        width: 12px !important;
+        height: 12px !important;
         display: block !important;
         flex-shrink: 0 !important;
       }
@@ -1098,11 +1102,11 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
       /* Mobile Responsive (<= 768px) */
       @media (max-width: 768px) {
         .note-container {
-          padding: 14px 10px 0 10px !important;
+          padding: 16px 10px 0 10px !important;
         }
         .stack .layer_1 .layer_2 .layer_3 {
-          min-height: calc(100vh - 35px) !important;
-          padding: 16px 14px 0 14px !important;
+          min-height: calc(100vh - 37px) !important;
+          padding: 26px 14px 0 14px !important;
           box-sizing: border-box !important;
         }
         .stack .layer_1 .layer_2 .layer_3 .contents:not(#vditor) {
@@ -1187,8 +1191,12 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         font-size: 13px;
         font-weight: 500;
         user-select: none;
+        opacity: 0.8;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
       }
       .toc-toggle-btn:hover {
+        opacity: 1;
         background: var(--bg-surface);
         color: var(--accent-fg);
         border-color: var(--text-muted);
@@ -1312,13 +1320,18 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         transition: all 0.2s ease;
         box-shadow: var(--shadow-sm);
         padding: 0;
+        opacity: 0.8;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
       }
       .edit-toolbar-toggle:hover {
+        opacity: 1;
         background: var(--bg-surface);
         color: var(--text-primary);
         border-color: var(--text-muted);
       }
       .edit-toolbar-toggle.active {
+        opacity: 1;
         background: var(--accent-bg);
         color: var(--accent-fg);
         border-color: var(--accent-fg);
@@ -1977,8 +1990,8 @@ var HTML = ({ lang, title, content, ext = {}, tips, isEdit, showPwPrompt, isPriv
         let isNoteLocked = ${JSON.stringify(!!ext.locked)};
         let isNoteShared = ${JSON.stringify(!!ext.share)};
         let isNoteRawPublic = ${JSON.stringify(!!ext.rawPublic)};
-        const LOCK_SVG_CLOSED = '<svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor"><path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z"></path></svg>';
-        const LOCK_SVG_OPEN = '<svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor"><path d="M5.5 4a2.5 2.5 0 0 1 4.607-1.346.75.75 0 1 0 1.264-.808A4 4 0 0 0 4 4v2h-.25C2.784 6 2 6.784 2 7.75v5.5C2 14.216 2.784 15 3.75 15h8.5a1.75 1.75 0 0 0 1.75-1.75v-5.5A1.75 1.75 0 0 0 12.25 6H5.5Zm6.75 3.5a.25.25 0 0 1 .25.25v5.5a.25.25 0 0 1-.25.25h-8.5a.25.25 0 0 1-.25-.25v-5.5a.25.25 0 0 1 .25-.25Z"></path></svg>';
+        const LOCK_SVG_CLOSED = '<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M4 4a4 4 0 0 1 8 0v2h.25c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 12.25 15h-8.5A1.75 1.75 0 0 1 2 13.25v-5.5C2 6.784 2.784 6 3.75 6H4Zm8.25 3.5h-8.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25ZM10.5 6V4a2.5 2.5 0 1 0-5 0v2Z"></path></svg>';
+        const LOCK_SVG_OPEN = '<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M5.5 4a2.5 2.5 0 0 1 4.607-1.346.75.75 0 1 0 1.264-.808A4 4 0 0 0 4 4v2h-.25C2.784 6 2 6.784 2 7.75v5.5C2 14.216 2.784 15 3.75 15h8.5a1.75 1.75 0 0 0 1.75-1.75v-5.5A1.75 1.75 0 0 0 12.25 6H5.5Zm6.75 3.5a.25.25 0 0 1 .25.25v5.5a.25.25 0 0 1-.25.25h-8.5a.25.25 0 0 1-.25-.25v-5.5a.25.25 0 0 1 .25-.25Z"></path></svg>';
 
         function genRandomAlnum(len) {
           const chars = "23456789abcdefghjkmnpqrstuvwxyz";
@@ -4221,9 +4234,9 @@ const THEME_CONTROLLER_SCRIPT = (lang) => `
       (function() {
         const themeBtn = document.getElementById("theme-toggle-btn");
         const mql = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
-        const ICON_AUTO = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>';
-        const ICON_DARK = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
-        const ICON_LIGHT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
+        const ICON_AUTO = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>';
+        const ICON_DARK = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+        const ICON_LIGHT = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
         const TITLES = {
           auto: "${SUPPORTED_LANG[lang].themeAuto}",
           dark: "${SUPPORTED_LANG[lang].themeDark}",
